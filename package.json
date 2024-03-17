@@ -12,6 +12,7 @@
     "watch-format": "onchange \"**/*\" -- prettier --write --log-level warn --ignore-unknown {{changed}}"
   },
   "devDependencies": {
+    "@types/hull.js": "^1.0.4",
     "@types/leaflet": "^1.9.8",
     "onchange": "^7.1.0",
     "prettier": "^3.2.5",
@@ -19,6 +20,7 @@
     "vite": "^5.1.6"
   },
   "dependencies": {
+    "hull.js": "^1.0.5",
     "leaflet": "^1.9.4"
   }
 }

@@ -5,11 +5,17 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  hull.js:
+    specifier: ^1.0.5
+    version: 1.0.5
   leaflet:
     specifier: ^1.9.4
     version: 1.9.4
 
 devDependencies:
+  '@types/hull.js':
+    specifier: ^1.0.4
+    version: 1.0.4
   '@types/leaflet':
     specifier: ^1.9.8
     version: 1.9.8
@@ -474,6 +480,13 @@ packages:
       }
     dev: true
 
+  /@types/hull.js@1.0.4:
+    resolution:
+      {
+        integrity: sha512-4eMDYQSFROPgbExE7btF37tCeXnGrMEPo0S2Ul00XIgWnxTLZGlJTSme42phtNpIBKVgbD/U1DWzVnMBhB9tUQ==,
+      }
+    dev: true
+
   /@types/leaflet@1.9.8:
     resolution:
       {
@@ -613,6 +626,13 @@ packages:
     dependencies:
       is-glob: 4.0.3
     dev: true
+
+  /hull.js@1.0.5:
+    resolution:
+      {
+        integrity: sha512-Fm7zZomuKRhboSZEvvLU8jY0Byb/DC84Z5E4LUC8xH7m9ODpsDNtYqU+Wf049ThxrwjNvvq2f4Mz9eY2UTE6rg==,
+      }
+    dev: false
 
   /ignore@5.3.1:
     resolution:
