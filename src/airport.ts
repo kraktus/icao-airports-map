@@ -25,25 +25,29 @@ export interface Airport {
   // keywords: string;
 }
 
+export const airports = Papa.parse(ALL, { header: true }).data as Airport[];
+
 const addToMap = (
   acc: Map<string, Ident[]>,
   airport: Airport,
   prefixLength: number,
 ) => {
-  const letter = airport.ident.slice(0, prefixLength);
-  if (acc.has(letter)) {
-    acc.get(letter).push(airport.ident);
+  const prefix = airport.ident.slice(0, prefixLength);
+  if (acc.has(prefix)) {
+    acc.get(prefix)!.push(airport.ident);
   } else {
-    acc.set(letter, [airport.ident]);
+    acc.set(prefix, [airport.ident]);
   }
 };
 
 // for each airport code ABCD,
 // it will be included in A: ABCD, AB: ABCD, and ABC: ABCD
 const indexByPrefix = (airports: Airport[]): Map<string, Ident[]> => {
-  const res = Map<string, Airport[]>();
-  for (const prefixLength of [1, 2, 3]) {
-    addToMap(res, airport, prefixLength);
+  const res = new Map<string, Ident[]>();
+  for (const airport of airports) {
+    for (const prefixLength of [1, 2, 3]) {
+      addToMap(res, airport, prefixLength);
+    }
   }
   return res;
 };
