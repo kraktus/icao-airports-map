@@ -1,0 +1,24 @@
+{
+  "name": "li-network",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc --watch",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "format": "prettier --write --log-level warn .",
+    "watch-format": "onchange \"**/*\" -- prettier --write --log-level warn --ignore-unknown {{changed}}"
+  },
+  "devDependencies": {
+    "@types/leaflet": "^1.9.8",
+    "onchange": "^7.1.0",
+    "prettier": "^3.2.5",
+    "typescript": "^5.4.2",
+    "vite": "^5.1.6"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
+}
