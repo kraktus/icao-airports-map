@@ -44,8 +44,7 @@ FILTERED_HEADERS = ["ident", "name", "latitude_deg", "longitude_deg"]
 
 TS_AIRPORTS = """
 // this file is generated automatically with `filter-icao.py`
-export const ALL = `{}`
-"""
+export const ALL = `{}`"""
 
 ########
 # Logs #
@@ -97,7 +96,7 @@ def write_csv(airports: List[Dict[str, str]]) -> str:
     writer = csv.DictWriter(f, fieldnames=FILTERED_HEADERS)
     writer.writeheader()
     writer.writerows(airports)
-    return f.getvalue()
+    return f.getvalue().trim()
 
 def write_ts(airports_csv: str) -> None:
     """write the airports to the  file"""

@@ -3,7 +3,7 @@ import './github.css';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 //import airports from '../extract.json';
-import {airports, Airport} from './airport';
+import { airports, Airport } from './airport';
 import hull from 'hull.js';
 
 // import { map, latLng, tileLayer } from "leaflet";
@@ -22,8 +22,9 @@ export interface MapConfig {
 // please don't forget that globe has the shape of geoid, latitude and longitude
 // are angles (not points with X and Y), and after projection we have some
 // map distortion
-const hullOf = (airports: Airport[]) => {
-  const points = airports.map(airport => [
+const hullOf = (ard: Airport[]) => {
+  console.log(ard);
+  const points = ard.map(airport => [
     airport.latitude_deg,
     airport.longitude_deg,
   ]);
@@ -74,13 +75,14 @@ const config: MapConfig = { center: [50, 10], zoom: 6 };
 
 const customMap = new CustomMap('map', config);
 //customMap.addMarker(51.5, -0.09, 'Hello, this is a dynamic Leaflet map!');
-console.log(hullOf(airports));
-for (const airport of airports) {
-  customMap.addCircle(
-    airport.latitude_deg,
-    airport.longitude_deg,
-    `${airport.ident}: ${airport.name}`,
-  );
-}
+// for (const airport of airports.iterator()) {
+//   customMap.addCircle(
+//     airport.latitude_deg,
+//     airport.longitude_deg,
+//     `${airport.ident}: ${airport.name}`,
+//   );
+// }
+
+console.log(airports.allOneLetterPrefixes()[0]);
 // @ts-ignore
-customMap.addPolygon(hullOf(airports));
+customMap.addPolygon(hullOf(airports.allOneLetterPrefixes()[0]));

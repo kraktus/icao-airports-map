@@ -1,5 +1,6 @@
 import { ALL } from './unparsed';
 import Papa from 'papaparse';
+import hull from 'hull.js';
 
 export type Ident = string;
 
@@ -25,7 +26,41 @@ export interface Airport {
   // keywords: string;
 }
 
-export const airports = Papa.parse(ALL, { header: true }).data as Airport[];
+const filtermap = <T, U>(arr: T[], f: (t: T) => U | undefined): U[] => {
+  const res = [];
+  for (const t of arr) {
+    console.log('filtermap', t);
+    const u = f(t);
+    if (u !== undefined) {
+      res.push(u);
+    }
+  }
+  return res;
+};
+
+const toAirportMap = (airports: Airport[]) => {
+  const res = new Map<Ident, Airport>();
+  for (const airport of airports) {
+    res.set(airport.ident, airport);
+  }
+  return res;
+};
+
+// TODO: check if http://andriiheonia.github.io/hull/#ex5 is necessary
+//
+// > All calculations in hull.js based on the cartesian coordinate system.
+// If you use it for the calculation and data visualization on the global map
+// please don't forget that globe has the shape of geoid, latitude and longitude
+// are angles (not points with X and Y), and after projection we have some
+// map distortion
+const hullOf = (ard: Airport[]) => {
+  const points = ard.map(airport => [
+    airport.latitude_deg,
+    airport.longitude_deg,
+  ]);
+  const hullPoints = hull(points);
+  return hullPoints;
+};
 
 const addToMap = (
   acc: Map<string, Ident[]>,
@@ -49,5 +84,46 @@ const indexByPrefix = (airports: Airport[]): Map<string, Ident[]> => {
       addToMap(res, airport, prefixLength);
     }
   }
+  console.log('indexByPrefix', res);
   return res;
 };
+
+export class Airports {
+  private map: Map<Ident, Airport>;
+  private byPrefix: Map<string, Ident[]>;
+  constructor(airports: Airport[]) {
+    this.map = toAirportMap(airports);
+    this.byPrefix = indexByPrefix(airports);
+  }
+  get(ident: Ident): Airport | undefined {
+    return this.map.get(ident);
+  }
+  iterator(): IterableIterator<Airport> {
+    return this.map.values();
+  }
+  all(): Airport[] {
+    return Array.from(this.map.values());
+  }
+  byIdent(ident: Ident): Airport {
+    const res = this.get(ident);
+    if (res === undefined) {
+      throw new Error(`no airport with ident ${ident}`);
+    }
+    return res;
+  }
+  allOneLetterPrefixes(): Airport[][] {
+    return filtermap(
+      this.byPrefix.entries(),
+      ([prefix, idents]: [string, Ident[]]) => {
+        console.log('in', prefix, idents);
+        if (prefix.length === 1) {
+          return idents.map(ident => this.byIdent(ident));
+        }
+      },
+    );
+  }
+}
+
+export const airports = new Airports(
+  Papa.parse(ALL, { header: true }).data as Airport[],
+);
