@@ -20,7 +20,10 @@
     "vite": "^5.1.6"
   },
   "dependencies": {
+    "@types/papaparse": "^5.3.14",
     "hull.js": "^1.0.5",
-    "leaflet": "^1.9.4"
+    "install": "^0.13.0",
+    "leaflet": "^1.9.4",
+    "papaparse": "^5.4.1"
   }
 }

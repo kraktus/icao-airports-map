@@ -2,34 +2,14 @@ import './style.css';
 import './github.css';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import airports from '../extract.json';
+//import airports from '../extract.json';
+import {airports, Airport} from './airport';
 import hull from 'hull.js';
 
 // import { map, latLng, tileLayer } from "leaflet";
 
 console.log('ICAO airport v0.0');
 
-// airport type
-export interface Airport {
-  id: number;
-  ident: string;
-  type: string;
-  name: string;
-  latitude_deg: number;
-  longitude_deg: number;
-  elevation_ft: number | string;
-  continent: string;
-  iso_country: string;
-  iso_region: string;
-  municipality: string;
-  scheduled_service: string;
-  gps_code: string;
-  iata_code: string;
-  local_code: string;
-  home_link: string;
-  wikipedia_link: string;
-  keywords: string;
-}
 export interface MapConfig {
   center: [number, number];
   zoom: number;
@@ -78,11 +58,14 @@ export class CustomMap {
   }
   // add polygon
   addPolygon(points: [number, number][]) {
-    L.polygon(points, {
+    const polygon = L.polygon(points, {
       color: 'red',
       fillColor: '#f03',
       fillOpacity: 0.15,
     }).addTo(this.map);
+    polygon.on('click', () => {
+      this.map.fitBounds(polygon.getBounds());
+    });
   }
 }
 
