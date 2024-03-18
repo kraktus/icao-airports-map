@@ -75,10 +75,12 @@ const config: MapConfig = { center: [50, 10], zoom: 2 };
 
 const customMap = new CustomMap('map', config);
 
+const i = 4;
 //console.log(airports.allOneLetterPrefixes()[0]);
 airports
   .allOneLetterPrefixes()
-  .slice(2, 3)
+  .slice(i, i + 1)
+  //.filter((ard: Airport[]) => ard[0].gps_code.startsWith('L'))
   .map((ard: Airport[]) => {
     for (const airport of ard) {
       customMap.addCircle(
