@@ -7,14 +7,33 @@ import hull from 'hull.js';
 
 console.log('ICAO airport v0.0');
 
-const oldfHull = (ard: Airport[]): [number, number][] => {
-  const points = ard.map(airport => [
-    airport.latitude_deg,
-    airport.longitude_deg,
-  ]);
-  const hullPoints = hull(points);
-  return hullPoints as [number, number][];
-};
+// const oldfHull = (ard: Airport[]): [number, number][] => {
+//   const points = ard.map(airport => [
+//     airport.latitude_deg,
+//     airport.longitude_deg,
+//   ]);
+//   const hullPoints = hull(points);
+//   return hullPoints as [number, number][];
+// };
+
+// const writeToOutput = (...text: string[]) => {
+//   const output = document.getElementById('output')!;
+//   output.innerHTML = output.innerHTML + text.join(' ') + '\n';
+// };
+
+const colors = [
+  '#9e0142',
+  '#d53e4f',
+  '#f46d43',
+  '#fdae61',
+  '#fee08b',
+  '#ffffbf',
+  '#e6f598',
+  '#abdda4',
+  '#66c2a5',
+  '#3288bd',
+  '#5e4fa2',
+];
 
 export interface MapConfig {
   center: [number, number];
@@ -54,7 +73,7 @@ export class CustomMap {
     const polygon = L.polygon(points, {
       color: color,
       fillColor: color,
-      fillOpacity: 0.15,
+      fillOpacity: 15,
     }).addTo(this.map);
     this.layers.push(polygon);
     // polygon.on('click', () => {
@@ -78,16 +97,16 @@ export class CustomMap {
   hullOf(ard: Airport[]): [number, number][] {
     const points = ard.map(airport => {
       const xyPt = this.map.latLngToContainerPoint({
-        lng: airport.latitude_deg,
-        lat: airport.longitude_deg,
+        lat: airport.latitude_deg,
+        lng: airport.longitude_deg,
       });
       return [xyPt.x, xyPt.y];
     });
-    const hullPoints = hull(points) as number[][];
-    return hullPoints.map(pt => {
-      const latLongPt = this.map.containerPointToLatLng(L.point(pt[0], pt[1]));
-      return [latLongPt.lng, latLongPt.lat];
-    }) as [number, number][];
+    const hullPoints = hull(points, 50) as [number, number][];
+    return hullPoints.map(([x, y]) => {
+      const latLongPt = this.map.containerPointToLatLng(L.point(x, y));
+      return [latLongPt.lat, latLongPt.lng];
+    });
   }
 }
 
@@ -99,13 +118,15 @@ const customMap = new CustomMap('map', config);
 document.getElementById('slider')!.addEventListener('input', () => {
   main(Number((document.getElementById('slider') as HTMLInputElement).value));
 });
-const main = (i: number) => {
+
+// js foreach combined with index
+const sliceSize = 2;
+const main = (sliceIndex: number) => {
   customMap.clear();
-  airports
-    .allOneLetterPrefixes()
-    .slice(i, i + 1)
+  Array.from(airports.allOneLetterPrefixes().entries())
+    //.slice(sliceSize * sliceIndex, (sliceSize + 1) * sliceIndex)
     //.filter((ard: Airport[]) => ard[0].gps_code.startsWith('D'))
-    .map((ard: Airport[]) => {
+    .map(([i, ard]) => {
       console.log(
         'first airport code: ',
         ard[0].gps_code,
@@ -113,14 +134,14 @@ const main = (i: number) => {
         ard.length,
       );
 
-      for (const airport of ard) {
-        customMap.addCircle(
-          airport.latitude_deg,
-          airport.longitude_deg,
-          `${airport.gps_code}: ${airport.name}`,
-        );
-      }
-      //const hullPoints = customMap.hullOf(ard);
+      // for (const airport of ard) {
+      //   customMap.addCircle(
+      //     airport.latitude_deg,
+      //     airport.longitude_deg,
+      //     `${airport.gps_code}: ${airport.name}`,
+      //   );
+      // }
+      const hullPoints = customMap.hullOf(ard);
       //console.log('hullPoints', hullPoints);
       //console.log('OLD hullPoints', oldfHull(ard));
       // const p180 = oldfHull(ard).map((x: [number, number]) => {
@@ -133,11 +154,9 @@ const main = (i: number) => {
       //   return after;
       // });
       //console.log('OLD+180FFF  hullPoints', p180);
-      console.log('before oldfHull');
       //const old_hull = oldfHull(ard);
-      console.log('after oldfHull');
       // @ts-ignore
-      //customMap.addPolygon(old_hull);
+      customMap.addPolygon(hullPoints, colors[i % colors.length]);
       //customMap.addPolygon(p180, 'blue');
     });
 };
