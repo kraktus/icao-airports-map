@@ -59,30 +59,35 @@ export class CustomMap {
   }
   // add polygon
   addPolygon(points: [number, number][]) {
-    const polygon = L.polygon(points, {
+    L.polygon(points, {
       color: 'red',
       fillColor: '#f03',
       fillOpacity: 0.15,
     }).addTo(this.map);
-    polygon.on('click', () => {
-      this.map.fitBounds(polygon.getBounds());
-    });
+    // polygon.on('click', () => {
+    //   this.map.fitBounds(polygon.getBounds());
+    // });
   }
 }
 
 // the config must show all the earth
-const config: MapConfig = { center: [50, 10], zoom: 6 };
+const config: MapConfig = { center: [50, 10], zoom: 2 };
 
 const customMap = new CustomMap('map', config);
-//customMap.addMarker(51.5, -0.09, 'Hello, this is a dynamic Leaflet map!');
-// for (const airport of airports.iterator()) {
-//   customMap.addCircle(
-//     airport.latitude_deg,
-//     airport.longitude_deg,
-//     `${airport.ident}: ${airport.name}`,
-//   );
-// }
 
-console.log(airports.allOneLetterPrefixes()[0]);
-// @ts-ignore
-customMap.addPolygon(hullOf(airports.allOneLetterPrefixes()[0]));
+//console.log(airports.allOneLetterPrefixes()[0]);
+airports
+  .allOneLetterPrefixes()
+  .slice(2, 3)
+  .map((ard: Airport[]) => {
+    for (const airport of ard) {
+      customMap.addCircle(
+        airport.latitude_deg,
+        airport.longitude_deg,
+        `${airport.gps_code}: ${airport.name}`,
+      );
+    }
+    const hullPoints = hullOf(ard);
+    // @ts-ignore
+    customMap.addPolygon(hullPoints);
+  });

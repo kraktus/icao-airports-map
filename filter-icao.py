@@ -40,7 +40,7 @@ RETRY_STRAT = Retry(
 )
 ADAPTER = HTTPAdapter(max_retries=RETRY_STRAT)
 
-FILTERED_HEADERS = ["ident", "name", "latitude_deg", "longitude_deg"]
+FILTERED_HEADERS = ["gps_code", "name", "latitude_deg", "longitude_deg"]
 
 TS_AIRPORTS = """
 // this file is generated automatically with `filter-icao.py`
@@ -86,7 +86,7 @@ def filter_icao(airport_str: airport_str) -> List[Dict[str, str]]:
     res = []
     for airport in airports:
         # if ident is an ICAO code (regex)
-        if re.match(r"^[A-Z]{4}$", airport["ident"]):
+        if re.match(r"^[A-Z]{4}$", airport["gps_code"]):
             res.append({x: airport[x].replace("`", "'") for x in FILTERED_HEADERS})
     return res
 
@@ -96,7 +96,7 @@ def write_csv(airports: List[Dict[str, str]]) -> str:
     writer = csv.DictWriter(f, fieldnames=FILTERED_HEADERS)
     writer.writeheader()
     writer.writerows(airports)
-    return f.getvalue().trim()
+    return f.getvalue().strip()
 
 def write_ts(airports_csv: str) -> None:
     """write the airports to the  file"""

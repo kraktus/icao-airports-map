@@ -7,7 +7,7 @@ export type Ident = string;
 // airport type
 export interface Airport {
   // id: number;
-  ident: Ident;
+  //ident: Ident;
   // type: string;
   name: string;
   latitude_deg: number;
@@ -18,7 +18,7 @@ export interface Airport {
   // iso_region: string;
   // municipality: string;
   // scheduled_service: string;
-  // gps_code: string;
+  gps_code: string;
   // iata_code: string;
   // local_code: string;
   // home_link: string;
@@ -41,25 +41,9 @@ const filtermap = <T, U>(arr: T[], f: (t: T) => U | undefined): U[] => {
 const toAirportMap = (airports: Airport[]) => {
   const res = new Map<Ident, Airport>();
   for (const airport of airports) {
-    res.set(airport.ident, airport);
+    res.set(airport.gps_code, airport);
   }
   return res;
-};
-
-// TODO: check if http://andriiheonia.github.io/hull/#ex5 is necessary
-//
-// > All calculations in hull.js based on the cartesian coordinate system.
-// If you use it for the calculation and data visualization on the global map
-// please don't forget that globe has the shape of geoid, latitude and longitude
-// are angles (not points with X and Y), and after projection we have some
-// map distortion
-const hullOf = (ard: Airport[]) => {
-  const points = ard.map(airport => [
-    airport.latitude_deg,
-    airport.longitude_deg,
-  ]);
-  const hullPoints = hull(points);
-  return hullPoints;
 };
 
 const addToMap = (
@@ -67,11 +51,11 @@ const addToMap = (
   airport: Airport,
   prefixLength: number,
 ) => {
-  const prefix = airport.ident.slice(0, prefixLength);
+  const prefix = airport.gps_code.slice(0, prefixLength);
   if (acc.has(prefix)) {
-    acc.get(prefix)!.push(airport.ident);
+    acc.get(prefix)!.push(airport.gps_code);
   } else {
-    acc.set(prefix, [airport.ident]);
+    acc.set(prefix, [airport.gps_code]);
   }
 };
 
@@ -113,7 +97,7 @@ export class Airports {
   }
   allOneLetterPrefixes(): Airport[][] {
     return filtermap(
-      this.byPrefix.entries(),
+      Array.from(this.byPrefix.entries()),
       ([prefix, idents]: [string, Ident[]]) => {
         console.log('in', prefix, idents);
         if (prefix.length === 1) {
