@@ -15,23 +15,6 @@ export interface MapConfig {
   zoom: number;
 }
 
-// TODO: check if http://andriiheonia.github.io/hull/#ex5 is necessary
-//
-// > All calculations in hull.js based on the cartesian coordinate system.
-// If you use it for the calculation and data visualization on the global map
-// please don't forget that globe has the shape of geoid, latitude and longitude
-// are angles (not points with X and Y), and after projection we have some
-// map distortion
-const hullOf = (ard: Airport[]) => {
-  console.log(ard);
-  const points = ard.map(airport => [
-    airport.latitude_deg,
-    airport.longitude_deg,
-  ]);
-  const hullPoints = hull(points);
-  return hullPoints;
-};
-
 export class CustomMap {
   private map: L.Map;
   constructor(elementId: string, config: MapConfig) {
@@ -68,6 +51,28 @@ export class CustomMap {
     //   this.map.fitBounds(polygon.getBounds());
     // });
   }
+
+  // TODO: check if http://andriiheonia.github.io/hull/#ex5 is necessary
+  //
+  // > All calculations in hull.js based on the cartesian coordinate system.
+  // If you use it for the calculation and data visualization on the global map
+  // please don't forget that globe has the shape of geoid, latitude and longitude
+  // are angles (not points with X and Y), and after projection we have some
+  // map distortion
+  hullOf(ard: Airport[]) {
+    const points = ard.map(airport => {
+      const xyPt = this.map.latLngToContainerPoint({
+        lng: airport.latitude_deg,
+        lat: airport.longitude_deg,
+      });
+      return [xyPt.x, xyPt.y];
+    });
+    const hullPoints = hull(points) as number[][];
+    return hullPoints.map(pt => {
+      const latLongPt = this.map.containerPointToLatLng(L.point(pt[0], pt[1]));
+      return [latLongPt.lat, latLongPt.lng];
+    });
+  }
 }
 
 // the config must show all the earth
@@ -75,21 +80,22 @@ const config: MapConfig = { center: [50, 10], zoom: 2 };
 
 const customMap = new CustomMap('map', config);
 
-const i = 4;
+const i = 0;
 //console.log(airports.allOneLetterPrefixes()[0]);
 airports
   .allOneLetterPrefixes()
   .slice(i, i + 1)
-  //.filter((ard: Airport[]) => ard[0].gps_code.startsWith('L'))
+  //.filter((ard: Airport[]) => ard[0].gps_code.startsWith('D'))
   .map((ard: Airport[]) => {
-    for (const airport of ard) {
-      customMap.addCircle(
-        airport.latitude_deg,
-        airport.longitude_deg,
-        `${airport.gps_code}: ${airport.name}`,
-      );
-    }
-    const hullPoints = hullOf(ard);
+    // for (const airport of ard) {
+    //   customMap.addCircle(
+    //     airport.latitude_deg,
+    //     airport.longitude_deg,
+    //     `${airport.gps_code}: ${airport.name}`,
+    //   );
+    // }
+    const hullPoints = customMap.hullOf(ard);
+    console.log('hullPoints', hullPoints);
     // @ts-ignore
     customMap.addPolygon(hullPoints);
   });

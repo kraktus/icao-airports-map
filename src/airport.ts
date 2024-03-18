@@ -28,7 +28,6 @@ export interface Airport {
 const filtermap = <T, U>(arr: T[], f: (t: T) => U | undefined): U[] => {
   const res = [];
   for (const t of arr) {
-    console.log('filtermap', t);
     const u = f(t);
     if (u !== undefined) {
       res.push(u);
@@ -67,7 +66,6 @@ const indexByPrefix = (airports: Airport[]): Map<string, Ident[]> => {
       addToMap(res, airport, prefixLength);
     }
   }
-  console.log('indexByPrefix', res);
   return res;
 };
 
@@ -98,7 +96,6 @@ export class Airports {
     return filtermap(
       Array.from(this.byPrefix.entries()),
       ([prefix, idents]: [string, Ident[]]) => {
-        console.log('in', prefix, idents);
         if (prefix.length === 1) {
           return idents.map(ident => this.byIdent(ident));
         }
