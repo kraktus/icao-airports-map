@@ -140,4 +140,4 @@ const main = (sliceIndex: number) => {
       //customMap.addPolygon(hullPoints, color);
     });
 };
-//main(0);
+main(0);

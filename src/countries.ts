@@ -4,21 +4,28 @@ import { colors } from './colors';
 import { Airports } from './airport';
 
 export const addGeo = (map: L.Map, arp: Airports) => {
-  const prefixLength = 2;
+  const prefixLength = 1;
   const prefixes = arp.listPrefix(prefixLength);
   const prefixesByCountry = arp.prefixesByCountry(prefixLength);
+  console.log('prefixesByCountry', prefixesByCountry);
   const style = (feature: any) => {
-    console.log('feature', feature);
+    //console.log('feature', feature);
     const countryCode = feature.properties.ISO_A2_EH;
     let fillColor = 'blue';
     if (countryCode !== undefined && countryCode !== '-99') {
-      const prefixesOfCountry = prefixesByCountry.get(countryCode)!;
+      const prefixesOfCountry = prefixesByCountry.get(countryCode);
+      console.log(
+        'countryCode',
+        countryCode,
+        'prefixesOfCountry',
+        prefixesOfCountry,
+      );
       let mostCommon = undefined;
-      if (prefixesOfCountry) {
+      if (prefixesOfCountry !== undefined) {
         mostCommon = Array.from(prefixesOfCountry.entries()).reduce((a, b) =>
           a[1] > b[1] ? a : b,
         )[0];
-        fillColor = colors[prefixes.indexOf(mostCommon[0]) % colors.length];
+        fillColor = colors[prefixes.indexOf(mostCommon) % colors.length];
       }
       console.log(
         'most common prefix of country',
