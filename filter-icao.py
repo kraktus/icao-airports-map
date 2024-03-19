@@ -7,30 +7,35 @@
 from __future__ import annotations
 
 import argparse
+import csv
+import io
 import json
 import logging
 import logging.handlers
-import os
-import requests
-import sys
-import csv
-import re
-import io
 import math
+import os
+import re
+import sys
 
+from argparse import RawTextHelpFormatter
+
+from collections import deque
 from dataclasses import dataclass
 from datetime import datetime
-from collections import deque
-
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
 from pathlib import Path
-from typing import Optional, List, Union, Tuple, Dict, Iterable
+from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
+
+import numpy as np
+import requests
+from requests.adapters import HTTPAdapter
+from sklearn.cluster import OPTICS
+from urllib3.util.retry import Retry
 
 #############
 # Constants #
 #############
 
+EARTH_RADIUS = 6371  # in kilometers
 
 # LOG_PATH = f"{__file__}.log"
 RETRY_STRAT = Retry(
@@ -70,8 +75,8 @@ export const ALL = `{}`"""
 # Classes #
 ###########
 
+
 def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
-    R = 6371  # Earth radius in kilometers
 
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -82,9 +87,10 @@ def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
         * math.sin(dlon / 2) ** 2
     )
     c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
-    distance = R * c
-
+    distance = EARTH_RADIUS * c
+    # kilometers
     return distance
+
 
 @dataclass
 class Airport:
@@ -92,7 +98,8 @@ class Airport:
     latitude_deg: float
     longitude_deg: float
     gps_code: str
-    HEADERS = ["name", "latitude_deg", "longitude_deg", "gps_code"]
+    iso_country: str
+    HEADERS = ["name", "latitude_deg", "longitude_deg", "gps_code", "iso_country"]
 
     @classmethod
     def from_dict(cls, data: Dict[str, str]) -> Airport:
@@ -101,6 +108,7 @@ class Airport:
             latitude_deg=float(data["latitude_deg"]),
             longitude_deg=float(data["longitude_deg"]),
             gps_code=data["gps_code"],
+            iso_country=data["iso_country"],
         )
 
     def to_dict(self) -> Dict[str, Union[str, float]]:
@@ -109,6 +117,7 @@ class Airport:
             "latitude_deg": self.latitude_deg,
             "longitude_deg": self.longitude_deg,
             "gps_code": self.gps_code,
+            "iso_country": self.iso_country,
         }
 
     def distance_to(self, apt2: Airport) -> float:
@@ -118,6 +127,14 @@ class Airport:
             apt2.latitude_deg,
             apt2.longitude_deg,
         )
+
+    def to_mercator_xy(self) -> Tuple[float, float]:
+        lat = math.radians(self.latitude_deg)
+        lon = math.radians(self.longitude_deg)
+        x = EARTH_RADIUS * lon
+        y = EARTH_RADIUS * math.log(math.tan(math.pi / 4 + lat / 2))
+        return (x, y)
+
 
 class Req:
 
@@ -162,7 +179,10 @@ def filter_icao(airport_str: str) -> Dict[str, Airport]:
     for airport in airports:
         # if ident is an ICAO code (regex)
         if re.match(r"^[A-Z]{4}$", airport["gps_code"]):
-            res[airport["gps_code"]] = Airport.from_dict(airport)
+            if airport["iso_country"] == "":
+                print(f"no iso_country for {airport['gps_code']}")
+            else:
+                res[airport["gps_code"]] = Airport.from_dict(airport)
     return res
 
 
@@ -181,24 +201,89 @@ def write_ts(airports_csv: str) -> None:
         f.write(TS_AIRPORTS.format(airports_csv))
 
 
-def main() -> None:
-    req = Req()
-    # from https://ourairports.com/data/
-    airport_str = req.http.get(
-        "https://davidmegginson.github.io/ourairports-data/airports.csv"
-    ).text
-    airports = filter_icao(airport_str)
-    for (letter, airports_of_region) in split_by_fst_letter(airports.values()).items():
+def find_outliers(airports: Dict[str, Airport]) -> List[str]:
+    res = []
+    for letter, airports_of_region in split_by_fst_letter(airports.values()).items():
         print(f"{letter}: filtering {len(airports_of_region)} airports")
         for airport in airports_of_region:
             # 1000km, arbitrary for now
             closest_distance, closest_arp = closest(airport, airports_of_region)
             if closest_distance > 1000:
                 print(f"{letter}: removing outlier {airport.gps_code}:{airport.name}")
-                del airports[airport.gps_code]
-            if airport.gps_code == "LGRS":
-                print(f"LGRS closest airport is {closest_arp.gps_code}:{closest_arp.name} at {closest_distance}km")
+                res.append(airport.gps_code)
+    return res
+
+
+def del_outliers(airports: Dict[str, Airport], outliers: List[str]) -> None:
+    for outlier in outliers:
+        del airports[outlier]
+
+
+# LPPS Porto Santo Airport LPPM Portimao Airport, 850km
+
+
+def dl_airports() -> None:
+    req = Req()
+    # from https://ourairports.com/data/
+    airport_str = req.http.get(
+        "https://davidmegginson.github.io/ourairports-data/airports.csv"
+    ).text
+    with open("airports.csv", "w") as f:
+        f.write(airport_str)
+
+
+def filter_airports() -> None:
+    with open("airports.csv", "r") as f:
+        airport_str = f.read()
+    airports = filter_icao(airport_str)
+    outliers = find_outliers(airports)
+    del_outliers(airports, outliers)
     write_ts(write_csv(airports.values()))
+
+
+def cluster() -> None:
+    with open("airports.csv", "r") as f:
+        airport_str = f.read()
+    airports = filter_icao(airport_str)
+    for letter, airports_of_region in split_by_fst_letter(airports.values()).items():
+        if letter != "L":
+            continue
+        print(f"{letter}: {len(airports_of_region)} airports")
+        np_arp = np.array([a.to_mercator_xy() for a in airports_of_region])
+        labels = OPTICS(min_samples=2, max_eps=2000).fit_predict(np_arp)
+        # get number of airports per cluster
+        cluster_count = {}
+        for label in labels:
+            if label not in cluster_count:
+                cluster_count[label] = 1
+            else:
+                cluster_count[label] += 1
+        print(
+            f"{letter}: {len(airports_of_region)} airports, {len(cluster_count)} clusters"
+        )
+        # display number of airports per cluster
+        print("cluster repartition", cluster_count)
+        # display outliers gps_code, and name
+
+
+def doc(dic: Dict[str, Callable[..., Any]]) -> str:
+    """Produce documentation for every command based on doc of each function"""
+    doc_string = ""
+    for name_cmd, func in dic.items():
+        doc_string += f"{name_cmd}: {func.__doc__}\n\n"
+    return doc_string
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter)
+    commands = {
+        "dl": dl_airports,
+        "filter": filter_airports,
+        "cluster": cluster,
+    }
+    parser.add_argument("command", choices=commands.keys(), help=doc(commands))
+    args = parser.parse_args()
+    commands[args.command]()
 
 
 ########

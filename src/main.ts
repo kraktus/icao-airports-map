@@ -19,10 +19,10 @@ const oldHull = (ard: Airport[]): [number, number][] => {
   return hullPoints as [number, number][];
 };
 
-const writeToOutput = (...text: string[]) => {
-  const output = document.getElementById('output')!;
-  output.innerHTML = output.innerHTML + text.join(' ') + '\n';
-};
+// const writeToOutput = (...text: string[]) => {
+//   const output = document.getElementById('output')!;
+//   output.innerHTML = output.innerHTML + text.join(' ') + '\n';
+// };
 
 export interface MapConfig {
   center: [number, number];
@@ -127,19 +127,17 @@ const main = (sliceIndex: number) => {
       console.log('all values', ard);
       const color = colors[i % colors.length];
 
-      // for (const airport of ard) {
-      //   customMap.addCircle(
-      //     airport.latitude_deg,
-      //     airport.longitude_deg,
-      //     `${airport.gps_code}: ${airport.name}`,
-      //     color,
-      //   );
-      // }
+      for (const airport of ard) {
+        customMap.addCircle(
+          airport.latitude_deg,
+          airport.longitude_deg,
+          `${airport.gps_code}: ${airport.name}`,
+          color,
+        );
+      }
       const hullPoints = customMap.hullOf(ard);
-      const oldHullPoints = oldHull(ard);
       // @ts-ignore
-      customMap.addPolygon(hullPoints, color);
-      customMap.addPolygon(oldHullPoints, 'blue');
+      //customMap.addPolygon(hullPoints, color);
     });
 };
 main(0);

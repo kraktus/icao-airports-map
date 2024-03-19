@@ -24,6 +24,7 @@
     "hull.js": "^1.0.5",
     "install": "^0.13.0",
     "leaflet": "^1.9.4",
+    "mapshaper": "^0.6.74",
     "papaparse": "^5.4.1"
   }
 }
