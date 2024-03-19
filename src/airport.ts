@@ -92,11 +92,15 @@ export class Airports {
     }
     return res;
   }
-  allOneLetterPrefixes(): Airport[][] {
+  getByPrefix(prefix: string): Airport[] {
+    return this.byPrefix.get(prefix)!.map(ident => this.byIdent(ident));
+  }
+
+  getAllPrefixes(length: number): Airport[][] {
     return filtermap(
       Array.from(this.byPrefix.entries()),
       ([prefix, idents]: [string, Ident[]]) => {
-        if (prefix.length === 1) {
+        if (prefix.length === length) {
           return idents.map(ident => this.byIdent(ident));
         }
       },
