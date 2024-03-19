@@ -7,33 +7,21 @@ import hull from 'hull.js';
 
 console.log('ICAO airport v0.0');
 
-// const oldfHull = (ard: Airport[]): [number, number][] => {
-//   const points = ard.map(airport => [
-//     airport.latitude_deg,
-//     airport.longitude_deg,
-//   ]);
-//   const hullPoints = hull(points);
-//   return hullPoints as [number, number][];
-// };
+const HULL_FACTOR = 50;
 
-// const writeToOutput = (...text: string[]) => {
-//   const output = document.getElementById('output')!;
-//   output.innerHTML = output.innerHTML + text.join(' ') + '\n';
-// };
+const oldHull = (ard: Airport[]): [number, number][] => {
+  const points = ard.map(airport => [
+    Number(airport.latitude_deg),
+    Number(airport.longitude_deg),
+  ]);
+  const hullPoints = hull(points, HULL_FACTOR);
+  return hullPoints as [number, number][];
+};
 
-// const colors = [
-//   '#9e0142',
-//   '#d53e4f',
-//   '#f46d43',
-//   '#fdae61',
-//   '#fee08b',
-//   '#ffffbf',
-//   '#e6f598',
-//   '#abdda4',
-//   '#66c2a5',
-//   '#3288bd',
-//   '#5e4fa2',
-// ];
+const writeToOutput = (...text: string[]) => {
+  const output = document.getElementById('output')!;
+  output.innerHTML = output.innerHTML + text.join(' ') + '\n';
+};
 
 // https://graphicdesign.stackexchange.com/questions/3682/where-can-i-find-a-large-palette-set-of-contrasting-colors-for-coloring-many-d
 // http://godsnotwheregodsnot.blogspot.com/2012/09/color-distribution-methodology.html
@@ -203,13 +191,6 @@ export class CustomMap {
     });
   }
 
-  // TODO: check if http://andriiheonia.github.io/hull/#ex5 is necessary
-  //
-  // > All calculations in hull.js based on the cartesian coordinate system.
-  // If you use it for the calculation and data visualization on the global map
-  // please don't forget that globe has the shape of geoid, latitude and longitude
-  // are angles (not points with X and Y), and after projection we have some
-  // map distortion
   hullOf(ard: Airport[]): [number, number][] {
     const points = ard.map(airport => {
       const xyPt = this.map.latLngToContainerPoint({
@@ -218,7 +199,7 @@ export class CustomMap {
       });
       return [xyPt.x, xyPt.y];
     });
-    const hullPoints = hull(points, 0) as [number, number][];
+    const hullPoints = hull(points, HULL_FACTOR) as [number, number][];
     return hullPoints.map(([x, y]) => {
       const latLongPt = this.map.containerPointToLatLng(L.point(x, y));
       return [latLongPt.lat, latLongPt.lng];
@@ -240,9 +221,7 @@ const sliceSize = 1;
 const main = (sliceIndex: number) => {
   customMap.clear();
   Array.from(airports.getAllPrefixes(1).entries())
-    //.slice(sliceSize * sliceIndex, (sliceSize + 1) * sliceIndex)
-    // customMap
-    //   .getByPrefix('LF')
+    .slice(sliceSize * sliceIndex, (sliceIndex + 1) * sliceSize)
     // .filter(
     //   ([_, ard]) =>
     //     ard[0].gps_code.startsWith('SO') || ard[0].gps_code.startsWith('SY'),
@@ -254,6 +233,7 @@ const main = (sliceIndex: number) => {
         'number of aprts: ',
         ard.length,
       );
+      console.log('all values', ard);
       const color = colors[i % colors.length];
 
       // for (const airport of ard) {
@@ -265,22 +245,10 @@ const main = (sliceIndex: number) => {
       //   );
       // }
       const hullPoints = customMap.hullOf(ard);
-      //console.log('hullPoints', hullPoints);
-      //console.log('OLD hullPoints', oldfHull(ard));
-      // const p180 = oldfHull(ard).map((x: [number, number]) => {
-      //   //console.log('in p180', x);
-      //   const after = [Number(x[0]), Number(x[1]) - 180] as unknown as [
-      //     number,
-      //     number,
-      //   ][];
-      //   //console.log('after', after);
-      //   return after;
-      // });
-      //console.log('OLD+180FFF  hullPoints', p180);
-      //const old_hull = oldfHull(ard);
+      const oldHullPoints = oldHull(ard);
       // @ts-ignore
       customMap.addPolygon(hullPoints, color);
-      //customMap.addPolygon(p180, 'blue');
+      customMap.addPolygon(oldHullPoints, 'blue');
     });
 };
 main(0);
