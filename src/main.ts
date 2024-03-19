@@ -5,19 +5,13 @@ import 'leaflet/dist/leaflet.css';
 import { airports, Airport } from './airport';
 import { colors } from './colors';
 import hull from 'hull.js';
+import { addGeo } from './countries';
+
+//  L.geoJSON(geojsonFeature).addTo(map);
 
 console.log('ICAO airport v0.0');
 
 const HULL_FACTOR = 50;
-
-const oldHull = (ard: Airport[]): [number, number][] => {
-  const points = ard.map(airport => [
-    Number(airport.latitude_deg),
-    Number(airport.longitude_deg),
-  ]);
-  const hullPoints = hull(points, HULL_FACTOR);
-  return hullPoints as [number, number][];
-};
 
 // const writeToOutput = (...text: string[]) => {
 //   const output = document.getElementById('output')!;
@@ -30,7 +24,7 @@ export interface MapConfig {
 }
 
 export class CustomMap {
-  private map: L.Map;
+  map: L.Map; // make private once finished
   private layers: L.Layer[] = [];
   constructor(elementId: string, config: MapConfig) {
     this.map = L.map(elementId).setView(config.center, config.zoom);
@@ -76,6 +70,10 @@ export class CustomMap {
     // });
   }
 
+  addGeoJson(geoJson: any) {
+    L.geoJSON(geoJson).addTo(this.map);
+  }
+
   clear() {
     this.layers.forEach(layer => {
       this.map.removeLayer(layer);
@@ -107,6 +105,8 @@ document.getElementById('slider')!.addEventListener('input', () => {
   main(Number((document.getElementById('slider') as HTMLInputElement).value));
 });
 
+addGeo(customMap.map, airports);
+
 // js foreach combined with index
 const sliceSize = 1;
 const main = (sliceIndex: number) => {
@@ -135,9 +135,9 @@ const main = (sliceIndex: number) => {
           color,
         );
       }
-      const hullPoints = customMap.hullOf(ard);
+      //const hullPoints = customMap.hullOf(ard);
       // @ts-ignore
       //customMap.addPolygon(hullPoints, color);
     });
 };
-main(0);
+//main(0);

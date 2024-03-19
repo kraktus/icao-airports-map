@@ -2,6 +2,7 @@ import { ALL } from './unparsed';
 import Papa from 'papaparse';
 
 export type Ident = string;
+export type Iso2 = string;
 
 // airport type
 export interface Airport {
@@ -13,7 +14,7 @@ export interface Airport {
   longitude_deg: number;
   // elevation_ft: number | string;
   // continent: string;
-  // iso_country: string;
+  iso_country: Iso2;
   // iso_region: string;
   // municipality: string;
   // scheduled_service: string;
@@ -96,6 +97,14 @@ export class Airports {
     return this.byPrefix.get(prefix)!.map(ident => this.byIdent(ident));
   }
 
+  listPrefix(length: number): string[] {
+    return filtermap(Array.from(this.byPrefix.keys()), (prefix: string) => {
+      if (prefix.length === length) {
+        return prefix;
+      }
+    });
+  }
+
   getAllPrefixes(length: number): Airport[][] {
     return filtermap(
       Array.from(this.byPrefix.entries()),
@@ -105,6 +114,26 @@ export class Airports {
         }
       },
     );
+  }
+  prefixesByCountry(length: number): Map<Iso2, Map<string, number>> {
+    const res = new Map<Iso2, Map<string, number>>();
+    for (const [prefix, idents] of this.byPrefix.entries()) {
+      if (prefix.length === length) {
+        for (const ident of idents) {
+          const airport = this.get(ident)!;
+          if (!res.has(airport.iso_country)) {
+            res.set(airport.iso_country, new Map<string, number>());
+          }
+          const m = res.get(airport.iso_country)!;
+          if (m.has(prefix)) {
+            m.set(prefix, m.get(prefix)! + 1);
+          } else {
+            m.set(prefix, 1);
+          }
+        }
+      }
+    }
+    return res;
   }
 }
 
