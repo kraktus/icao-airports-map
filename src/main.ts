@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { airports, Airport } from './airport';
 import { colors } from './colors';
 import hull from 'hull.js';
-import { addGeo } from './countries';
+import { addGeo, testPIPs } from './countries';
 
 //  L.geoJSON(geojsonFeature).addTo(map);
 
@@ -112,19 +112,19 @@ const sliceSize = 1;
 const main = (sliceIndex: number) => {
   customMap.clear();
   Array.from(airports.getAllPrefixes(1).entries())
-    .slice(sliceSize * sliceIndex, (sliceIndex + 1) * sliceSize)
+    //.slice(sliceSize * sliceIndex, (sliceIndex + 1) * sliceSize)
     // .filter(
     //   ([_, ard]) =>
     //     ard[0].gps_code.startsWith('SO') || ard[0].gps_code.startsWith('SY'),
     // )
     .map(([i, ard]) => {
-      console.log(
-        'first airport code: ',
-        ard[0].gps_code,
-        'number of aprts: ',
-        ard.length,
-      );
-      console.log('all values', ard);
+      // console.log(
+      //   'first airport code: ',
+      //   ard[0].gps_code,
+      //   'number of aprts: ',
+      //   ard.length,
+      // );
+      // console.log('all values', ard);
       const color = colors[i % colors.length];
 
       for (const airport of ard) {
@@ -140,4 +140,5 @@ const main = (sliceIndex: number) => {
       //customMap.addPolygon(hullPoints, color);
     });
 };
+testPIPs();
 main(0);
