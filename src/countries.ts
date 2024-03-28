@@ -1,14 +1,22 @@
 import * as Countries from '../country-borders-simplified.geo.json';
 import * as L from 'leaflet';
 import { colors } from './colors';
-import { Airports } from './airport';
+import { Airports, Iso2 } from './airport';
+
+const prefixLength = 1;
 
 export const addGeo = (map: L.Map, arp: Airports) => {
-  const prefixLength = 1;
-  const prefixes = arp.listPrefix(prefixLength);
   const prefixesByCountry = arp.prefixesByCountry(prefixLength);
   //console.log('prefixesByCountry', prefixesByCountry);
-  const style = (feature: any) => {
+  L.geoJson(Countries as any, { style: style(prefixesByCountry, arp) }).addTo(
+    map,
+  );
+};
+
+const style =
+  (prefixesByCountry: Map<Iso2, Map<string, number>>, arp: Airports) =>
+  (feature: any) => {
+    const prefixes = arp.listPrefix(prefixLength);
     //console.log('feature', feature);
     const countryCode = feature.properties.ISO_A2_EH;
     let fillColor = 'blue';
@@ -43,8 +51,6 @@ export const addGeo = (map: L.Map, arp: Airports) => {
       fillOpacity: 0.4,
     };
   };
-  L.geoJson(Countries as any, { style: style }).addTo(map);
-};
 
 interface Point {
   x: number;
