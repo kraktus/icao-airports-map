@@ -7,7 +7,7 @@ const prefixLength = 1;
 
 export const addGeo = (map: L.Map, arp: Airports) => {
   const prefixesByCountry = arp.prefixesByCountry(prefixLength);
-  //console.log('prefixesByCountry', prefixesByCountry);
+  console.log('prefixesByCountry', prefixesByCountry);
   L.geoJson(Countries as any, { style: style(prefixesByCountry, arp) }).addTo(
     map,
   );
@@ -37,9 +37,8 @@ const airportsInCountry = (
   return res;
 };
 
-const getMostCommonPrefix = (airports: Airport[]): string => {
-  const prefixes = countBy(airports, (airport: Airport) => airport.gps_code);
-  return getMostCommon(prefixes);
+const getPrefixes = (airports: Airport[]): Map<string, number> => {
+  return countBy(airports, (airport: Airport) => airport.gps_code);
 };
 
 const style =
@@ -49,17 +48,32 @@ const style =
     const countryCode = feature.properties.ISO_A2_EH;
     let fillColor = 'blue';
     if (countryCode !== undefined && countryCode !== '-99') {
-      const prefixesOfCountry = prefixesByCountry.get(countryCode);
-      console.log(
-        'countryCode',
-        countryCode,
-        'prefixesOfCountry',
-        prefixesOfCountry,
-      );
+      // only works for polygon, not multipolygon
+      let prefixesOfCountry = undefined;
+      if (feature.geometry.type === 'Polygon') {
+        //console.log('before airportsInCountry', countryCode);
+        prefixesOfCountry = getPrefixes(
+          airportsInCountry(arp, feature.geometry.coordinates),
+        );
+      }
+      if (prefixesOfCountry === undefined || prefixesOfCountry.size === 0) {
+        //console.log('fallback');
+        prefixesOfCountry = prefixesByCountry.get(countryCode);
+      }
+      if (countryCode == 'FR') {
+        console.log(
+          'countryCode',
+          countryCode,
+          'prefixesOfCountry',
+          prefixesOfCountry,
+        );
+      }
       let mostCommonPrefix = undefined;
       if (prefixesOfCountry !== undefined) {
         mostCommonPrefix = getMostCommon(prefixesOfCountry);
-        fillColor = arp.prefixColor(mostCommonPrefix, prefixLength);
+        if (mostCommonPrefix !== undefined) {
+          fillColor = arp.prefixColor(mostCommonPrefix, prefixLength);
+        }
       }
       // console.log(
       //   'most common prefix of country',

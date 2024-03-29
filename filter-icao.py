@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import io
 import json
@@ -27,6 +28,7 @@ from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple, Union
 
 import numpy as np
 import requests
+import shapely.geometry
 from requests.adapters import HTTPAdapter
 from sklearn.cluster import OPTICS
 from urllib3.util.retry import Retry
@@ -172,7 +174,17 @@ def split_by_fst_letter(airports: Iterable[Airport]) -> Dict[str, List[Airport]]
     return airport_dict
 
 
-def filter_icao(airport_str: str) -> Dict[str, Airport]:
+def point_in_polygon(
+    airport: Airport, polygon: List[List[Tuple[float, float]]]
+) -> bool:
+    """check if a point using shapely"""
+    x, y = airport.longitude_deg, airport.latitude_deg  # .to_mercator_xy()
+    point = shapely.geometry.Point(x, y)
+    polygon = shapely.geometry.Polygon(shell=polygon[0], holes=polygon[1:])
+    return polygon.contains(point)
+
+
+def _filter_icao(airport_str: str) -> Dict[str, Airport]:
     """only keep airports with an ICAO code"""
     airports = csv.DictReader(io.StringIO(airport_str))
     res = {}
@@ -184,6 +196,12 @@ def filter_icao(airport_str: str) -> Dict[str, Airport]:
             else:
                 res[airport["gps_code"]] = Airport.from_dict(airport)
     return res
+
+
+def get_airports() -> Dict[str, Airport]:
+    with open("airports.csv", "r") as f:
+        airport_str = f.read()
+    return _filter_icao(airport_str)
 
 
 def write_csv(airports: Iterable[Airport]) -> str:
@@ -199,6 +217,15 @@ def write_ts(airports_csv: str) -> None:
     """write the airports to the  file"""
     with open("src/unparsed.ts", "w") as f:
         f.write(TS_AIRPORTS.format(airports_csv))
+
+
+def write_geojson_airports(airports: list[Any]) -> None:
+    """write the airports to a geojson file"""
+    json.dump(
+        {"type": "FeatureCollection", "features": airports},
+        open("country-borders-simplified.geo.json", "w"),
+        indent=2,
+    )
 
 
 def find_outliers(airports: Dict[str, Airport]) -> List[str]:
@@ -233,17 +260,55 @@ def dl_airports() -> None:
 
 
 def filter_airports() -> None:
-    with open("airports.csv", "r") as f:
-        airport_str = f.read()
-    airports = filter_icao(airport_str)
+    airports = get_airports()
     outliers = find_outliers(airports)
     del_outliers(airports, outliers)
     write_ts(write_csv(airports.values()))
 
 
+def airports_per_polygon():
+    """count number of airports per polygon"""
+    with open("country-borders-simplified.geo.json", "r") as f:
+        geojson = json.load(f)
+    updated_geojson = []
+    airports = get_airports()
+    nb_feature = len(geojson["features"])
+    dep_time = datetime.now()
+    for i, feature in enumerate(geojson["features"]):
+        assert feature["geometry"]["type"] == "Polygon"
+        polygon = feature["geometry"]["coordinates"]
+        print(f"{i}/{nb_feature}")
+        # no hole in polygon
+        # assert len(polygon) == 1, "no holes"
+        arp_in = []
+        for airport in copy.deepcopy(list(airports.values())):
+            try:
+                pip = point_in_polygon(airport, polygon)
+            except Exception as e:
+                if airport.gps_code == "NZSP":
+                    # known issue because the airport is located exactly at -90°. will be fixed soon
+                    # in the airport db
+                    continue
+            if pip:  # type: ignore
+                arp_in.append(airport.gps_code)
+                # print(f"{i} contains {airport.gps_code}")
+                del airports[airport.gps_code]
+            # print("bfr", airports)
+            # print("aft", airports)
+        updated_geojson.append(
+            {
+                "type": "Feature",
+                "geometry": {"type": "Polygon", "coordinates": polygon},
+                "properties": {**feature["properties"], "airports_gps_code": arp_in},
+            }
+        )
+    print("took ", datetime.now() - dep_time)
+    print(f"{len(airports.keys())} remaining airports", airports.keys())
+    write_geojson_airports(updated_geojson)
+
+
 def split_multipolygon():
     """split a multipolygon into multiple polygons"""
-    # json load "country-borders-simplified.geo.json"
     with open("country-borders-simplified.geo.json", "r") as f:
         geojson = json.load(f)
     res = []
@@ -260,17 +325,11 @@ def split_multipolygon():
                 )
         else:
             res.append(feature)
-    json.dump(
-        {"type": "FeatureCollection", "features": res},
-        open("country-borders-simplified.geo.json", "w"),
-        indent=2,
-    )
+    write_geojson_airports(res)
 
 
 def cluster() -> None:
-    with open("airports.csv", "r") as f:
-        airport_str = f.read()
-    airports = filter_icao(airport_str)
+    airports = get_airports()
     for letter, airports_of_region in split_by_fst_letter(airports.values()).items():
         if letter != "L":
             continue
@@ -305,8 +364,9 @@ def main() -> None:
     commands = {
         "dl": dl_airports,
         "filter": filter_airports,
-        "cluster": cluster,
         "split_polygon": split_multipolygon,
+        "airports_per_polygon": airports_per_polygon,
+        "exp_cluster": cluster,
     }
     parser.add_argument("command", choices=commands.keys(), help=doc(commands))
     args = parser.parse_args()
