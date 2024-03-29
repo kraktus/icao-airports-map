@@ -9,7 +9,7 @@
     "build": "tsc && vite build",
     "preview": "vite preview",
     "format": "prettier --write --log-level warn .",
-    "watch-format": "onchange \"**/*\" -- prettier --write --log-level warn --ignore-unknown {{changed}}"
+    "watch-format": "onchange \"**/*\" -- prettier --write --log-level warn {{changed}}"
   },
   "devDependencies": {
     "@types/hull.js": "^1.0.4",

@@ -1,7 +1,7 @@
 import * as Countries from '../country-borders-simplified.geo.json';
 import * as L from 'leaflet';
-import { colors } from './colors';
-import { Airports, Iso2 } from './airport';
+import { Airports, Iso2, Airport } from './airport';
+import { countBy, getMostCommon } from './utils';
 
 const prefixLength = 1;
 
@@ -13,27 +13,53 @@ export const addGeo = (map: L.Map, arp: Airports) => {
   );
 };
 
+// interface GeoFeature {
+//   type: string;
+//   geometry: {
+//     type: string;
+//     coordinates: [number, number][][][];
+//   };
+//   properties: { ISO_A2_EH: string };
+// }
+
+const airportsInCountry = (
+  arp: Airports,
+  coordinates: [number, number][],
+): Airport[] => {
+  const coordinatesPts = coordinates.map(([lat, lon]) => ({ x: lon, y: lat }));
+  const res = [];
+  for (const airport of arp.all()) {
+    const point = { x: airport.longitude_deg, y: airport.latitude_deg };
+    if (pointIsInPoly(point, coordinatesPts)) {
+      res.push(airport);
+    }
+  }
+  return res;
+};
+
+const getMostCommonPrefix = (airports: Airport[]): string => {
+  const prefixes = countBy(airports, (airport: Airport) => airport.gps_code);
+  return getMostCommon(prefixes);
+};
+
 const style =
   (prefixesByCountry: Map<Iso2, Map<string, number>>, arp: Airports) =>
   (feature: any) => {
-    const prefixes = arp.listPrefix(prefixLength);
     //console.log('feature', feature);
     const countryCode = feature.properties.ISO_A2_EH;
     let fillColor = 'blue';
     if (countryCode !== undefined && countryCode !== '-99') {
       const prefixesOfCountry = prefixesByCountry.get(countryCode);
-      // console.log(
-      //   'countryCode',
-      //   countryCode,
-      //   'prefixesOfCountry',
-      //   prefixesOfCountry,
-      // );
-      let mostCommon = undefined;
+      console.log(
+        'countryCode',
+        countryCode,
+        'prefixesOfCountry',
+        prefixesOfCountry,
+      );
+      let mostCommonPrefix = undefined;
       if (prefixesOfCountry !== undefined) {
-        mostCommon = Array.from(prefixesOfCountry.entries()).reduce((a, b) =>
-          a[1] > b[1] ? a : b,
-        )[0];
-        fillColor = colors[prefixes.indexOf(mostCommon) % colors.length];
+        mostCommonPrefix = getMostCommon(prefixesOfCountry);
+        fillColor = arp.prefixColor(mostCommonPrefix, prefixLength);
       }
       // console.log(
       //   'most common prefix of country',
@@ -59,7 +85,7 @@ interface Point {
 
 // doubtful source, SO
 // https://stackoverflow.com/a/17490923/20374403
-function pointIsInPoly(p: Point, polygon: Point[]) {
+function pointIsInPoly(p: Point, polygon: Point[]): boolean {
   let isInside = false;
   let minX = polygon[0].x,
     maxX = polygon[0].x;

@@ -127,14 +127,14 @@ const main = (sliceIndex: number) => {
       // console.log('all values', ard);
       const color = colors[i % colors.length];
 
-      for (const airport of ard) {
-        customMap.addCircle(
-          airport.latitude_deg,
-          airport.longitude_deg,
-          `${airport.gps_code}: ${airport.name}`,
-          color,
-        );
-      }
+      // for (const airport of ard) {
+      //   customMap.addCircle(
+      //     airport.latitude_deg,
+      //     airport.longitude_deg,
+      //     `${airport.gps_code}: ${airport.name}`,
+      //     color,
+      //   );
+      // }
       //const hullPoints = customMap.hullOf(ard);
       // @ts-ignore
       //customMap.addPolygon(hullPoints, color);

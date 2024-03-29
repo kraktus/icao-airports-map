@@ -1,5 +1,6 @@
 import { ALL } from './unparsed';
 import Papa from 'papaparse';
+import { colors } from './colors';
 
 export type Ident = string;
 export type Iso2 = string;
@@ -103,6 +104,12 @@ export class Airports {
         return prefix;
       }
     });
+  }
+  prefixColor(prefix: string, length: number): string {
+    if (prefix.length !== length) {
+      throw new Error(`prefix ${prefix} has length ${prefix.length}`);
+    }
+    return colors[this.listPrefix(length).indexOf(prefix) % colors.length];
   }
 
   getAllPrefixes(length: number): Airport[][] {

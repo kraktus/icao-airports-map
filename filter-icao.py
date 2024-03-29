@@ -241,6 +241,32 @@ def filter_airports() -> None:
     write_ts(write_csv(airports.values()))
 
 
+def split_multipolygon():
+    """split a multipolygon into multiple polygons"""
+    # json load "country-borders-simplified.geo.json"
+    with open("country-borders-simplified.geo.json", "r") as f:
+        geojson = json.load(f)
+    res = []
+    for feature in geojson["features"]:
+        if feature["geometry"]["type"] == "MultiPolygon":
+            for polygon in feature["geometry"]["coordinates"]:
+                # copy all MultiPolygon changing only type geometry and coordinates
+                res.append(
+                    {
+                        "type": "Feature",
+                        "geometry": {"type": "Polygon", "coordinates": polygon},
+                        "properties": feature["properties"],
+                    }
+                )
+        else:
+            res.append(feature)
+    json.dump(
+        {"type": "FeatureCollection", "features": res},
+        open("country-borders-simplified.geo.json", "w"),
+        indent=2,
+    )
+
+
 def cluster() -> None:
     with open("airports.csv", "r") as f:
         airport_str = f.read()
@@ -280,6 +306,7 @@ def main() -> None:
         "dl": dl_airports,
         "filter": filter_airports,
         "cluster": cluster,
+        "split_polygon": split_multipolygon,
     }
     parser.add_argument("command", choices=commands.keys(), help=doc(commands))
     args = parser.parse_args()
