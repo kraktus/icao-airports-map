@@ -5,6 +5,42 @@ import { countBy, getMostCommon } from './utils';
 
 const prefixLength = 1;
 
+const toBr = (...l: string[]) => {
+  // place each element into <b> /<b><br /> tag
+  return l.map(y => `${y}<br />`).join('');
+};
+
+const text = (...l: string[]) => {
+  return toBr(`id ${l[0]}`, `nb arps ${l[1]}`);
+};
+
+// method that we will use to update the control based on feature properties passed
+const update = (div: HTMLElement, feature?: any) => {
+  const p = feature?.properties;
+  return (div.innerHTML =
+    '<h4>Airport info</h4>' +
+    (p
+      ? text(feature.id, p.airports_gps_code.length)
+      : 'Hover over a country'));
+};
+
+const getInfo = () => {
+  // @ts-ignore
+  let info = L.control();
+
+  info.onAdd = function (map: L.Map) {
+    // @ts-ignore
+    this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
+    console.log('_div', this._div);
+    // @ts-ignore
+    update(this._div);
+    // @ts-ignore
+    return this._div;
+  };
+  return info;
+};
+let info = getInfo(); // FIXME, temporary, eventually move this to customMap
+
 const highlightFeature = (e: L.LeafletMouseEvent) => {
   let layer = e.target;
   layer.setStyle({
@@ -13,7 +49,7 @@ const highlightFeature = (e: L.LeafletMouseEvent) => {
     dashArray: '',
     fillOpacity: 0.7,
   });
-
+  update(info._div, layer.feature);
   layer.bringToFront();
 };
 
@@ -37,6 +73,7 @@ export const addGeo = (map: L.Map, arp: Airports) => {
   const resetHighlight = (e: L.LeafletMouseEvent) => {
     if (geojson !== undefined) {
       console.log('tested!');
+      update(info._div);
       geojson.resetStyle(e.target);
     } else {
       console.log('geojson is undefined');
@@ -46,6 +83,7 @@ export const addGeo = (map: L.Map, arp: Airports) => {
     style: style(prefixesByCountry, arp),
     onEachFeature: onEachFeature(map, resetHighlight),
   });
+  info.addTo(map);
   geojson.addTo(map);
 };
 

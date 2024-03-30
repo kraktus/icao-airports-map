@@ -1,5 +1,4 @@
 import './style.css';
-import './github.css';
 import * as L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { airports, Airport } from './airport';
