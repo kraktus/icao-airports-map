@@ -92,8 +92,8 @@ fn airports_in_polygon() -> Result<()> {
     let content = std::fs::read_to_string(country_borders(1)).context("geojson failed")?;
     let mut airports = get_airports()?;
     let geojson: geojson::FeatureCollection = content.parse()?;
-    let mut updated_geojson = Vec::new();
     let nb_feature = geojson.features.len();
+    let mut updated_geojson = Vec::with_capacity(nb_feature);
     let dep_time = std::time::Instant::now();
     for (i, feature) in geojson.features.iter().enumerate() {
         let Some(Polygon(polygon)) = feature.geometry.as_ref().map(|x| &x.value) else {
@@ -112,11 +112,12 @@ fn airports_in_polygon() -> Result<()> {
         }
         let mut updated_feature = feature.clone();
         updated_feature.set_property("airports_gps_code", arp_in.join(","));
+        updated_feature.id = Some(geojson::feature::Id::Number(i.into()));
         updated_geojson.push(updated_feature);
     }
     println!("took: {:?} to check", dep_time.elapsed());
     println!("airports not in any polygon: {:?}", airports.keys().len());
-    Ok(())
+    write_geojson(updated_geojson)
 }
 
 fn main() -> Result<()> {

@@ -11,6 +11,6 @@ ogr2ogr -f GeoJSON -select ISO_A2_EH -s_srs ne_10m_admin_0_countries.prj -t_srs 
 # with jq, print values of SOV_A3, ADM0_A3, wherever they are
 # jq '.features[].properties | .ISO_A2_EH' country-borders.geo.json
 # TODO, maybe 10% is too low, think about 30/50% for later
-# pnpm mapshaper natural-earth/country-borders.geo.json -simplify keep-shapes 10% -o format=geojson country-borders-simplified.geo.json
+pnpm mapshaper natural-earth/country-borders.geo.json -simplify keep-shapes 10% -o format=geojson country-borders-simplified.geo.json
 
-cp country-borders.geo.json ../country-borders-simplified.geo.json
+#cp country-borders.geo.json ../country-borders-simplified.geo.json

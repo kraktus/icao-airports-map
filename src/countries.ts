@@ -1,16 +1,52 @@
-import * as Countries from '../country-borders-simplified.geo.json';
+import * as Countries from '../country-borders-simplified-2.geo.json';
 import * as L from 'leaflet';
 import { Airports, Iso2, Airport } from './airport';
 import { countBy, getMostCommon } from './utils';
 
 const prefixLength = 1;
 
+const highlightFeature = (e: L.LeafletMouseEvent) => {
+  let layer = e.target;
+  layer.setStyle({
+    weight: 5,
+    color: '#666',
+    dashArray: '',
+    fillOpacity: 0.7,
+  });
+
+  layer.bringToFront();
+};
+
+const zoomToFeature = (map: L.Map) => (e: L.LeafletMouseEvent) => {
+  map.fitBounds(e.target.getBounds());
+};
+
+const onEachFeature =
+  (map: L.Map, resetHighlight: any) => (feature: any, layer: L.Layer) => {
+    layer.on({
+      mouseover: highlightFeature,
+      mouseout: resetHighlight,
+      click: zoomToFeature(map),
+    });
+  };
+
 export const addGeo = (map: L.Map, arp: Airports) => {
   const prefixesByCountry = arp.prefixesByCountry(prefixLength);
   console.log('prefixesByCountry', prefixesByCountry);
-  L.geoJson(Countries as any, { style: style(prefixesByCountry, arp) }).addTo(
-    map,
-  );
+  let geojson: any;
+  const resetHighlight = (e: L.LeafletMouseEvent) => {
+    if (geojson !== undefined) {
+      console.log('tested!');
+      geojson.resetStyle(e.target);
+    } else {
+      console.log('geojson is undefined');
+    }
+  };
+  geojson = L.geoJson(Countries as any, {
+    style: style(prefixesByCountry, arp),
+    onEachFeature: onEachFeature(map, resetHighlight),
+  });
+  geojson.addTo(map);
 };
 
 // interface GeoFeature {
@@ -22,23 +58,10 @@ export const addGeo = (map: L.Map, arp: Airports) => {
 //   properties: { ISO_A2_EH: string };
 // }
 
-const airportsInCountry = (
-  arp: Airports,
-  coordinates: [number, number][],
-): Airport[] => {
-  const coordinatesPts = coordinates.map(([lat, lon]) => ({ x: lon, y: lat }));
-  const res = [];
-  for (const airport of arp.all()) {
-    const point = { x: airport.longitude_deg, y: airport.latitude_deg };
-    if (pointIsInPoly(point, coordinatesPts)) {
-      res.push(airport);
-    }
-  }
-  return res;
-};
-
-const getPrefixes = (airports: Airport[]): Map<string, number> => {
-  return countBy(airports, (airport: Airport) => airport.gps_code);
+const getPrefixes = (gps_codes: string[]): Map<string, number> => {
+  return countBy(gps_codes, (gps_code: string) =>
+    gps_code.slice(0, prefixLength),
+  );
 };
 
 const style =
@@ -52,14 +75,12 @@ const style =
       let prefixesOfCountry = undefined;
       if (feature.geometry.type === 'Polygon') {
         //console.log('before airportsInCountry', countryCode);
-        prefixesOfCountry = getPrefixes(
-          airportsInCountry(arp, feature.geometry.coordinates),
-        );
+        prefixesOfCountry = getPrefixes(feature.properties.airports_gps_code);
       }
-      if (prefixesOfCountry === undefined || prefixesOfCountry.size === 0) {
-        //console.log('fallback');
-        prefixesOfCountry = prefixesByCountry.get(countryCode);
-      }
+      // if (prefixesOfCountry === undefined || prefixesOfCountry.size === 0) {
+      //   //console.log('fallback');
+      //   prefixesOfCountry = prefixesByCountry.get(countryCode);
+      // }
       if (countryCode == 'FR') {
         console.log(
           'countryCode',
@@ -91,62 +112,3 @@ const style =
       fillOpacity: 0.4,
     };
   };
-
-interface Point {
-  x: number;
-  y: number;
-}
-
-// doubtful source, SO
-// https://stackoverflow.com/a/17490923/20374403
-function pointIsInPoly(p: Point, polygon: Point[]): boolean {
-  let isInside = false;
-  let minX = polygon[0].x,
-    maxX = polygon[0].x;
-  let minY = polygon[0].y,
-    maxY = polygon[0].y;
-  for (let n = 1; n < polygon.length; n++) {
-    let q = polygon[n];
-    minX = Math.min(q.x, minX);
-    maxX = Math.max(q.x, maxX);
-    minY = Math.min(q.y, minY);
-    maxY = Math.max(q.y, maxY);
-  }
-
-  // fast path by computing polygon bounding box
-  if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) {
-    return false;
-  }
-
-  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
-    if (
-      polygon[i].y > p.y != polygon[j].y > p.y &&
-      p.x <
-        ((polygon[j].x - polygon[i].x) * (p.y - polygon[i].y)) /
-          (polygon[j].y - polygon[i].y) +
-          polygon[i].x
-    ) {
-      isInside = !isInside;
-    }
-  }
-
-  return isInside;
-}
-
-export const testPIPs = () => {
-  const polygon = [
-    { x: 0, y: 0 },
-    { x: 0, y: 1 },
-    { x: 1, y: 1 },
-    { x: 1, y: 0 },
-  ];
-  const points = [
-    { x: 0.5, y: 0.5 },
-    { x: 0.5, y: 1.5 },
-    { x: 1.5, y: 0.5 },
-    { x: 1.5, y: 1.5 },
-  ];
-  points.forEach(p => {
-    console.log('point', p, 'is in polygon', pointIsInPoly(p, polygon));
-  });
-};

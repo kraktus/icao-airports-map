@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { airports, Airport } from './airport';
 import { colors } from './colors';
 import hull from 'hull.js';
-import { addGeo, testPIPs } from './countries';
+import { addGeo } from './countries';
 
 //  L.geoJSON(geojsonFeature).addTo(map);
 
@@ -140,5 +140,4 @@ const main = (sliceIndex: number) => {
       //customMap.addPolygon(hullPoints, color);
     });
 };
-testPIPs();
 main(0);
