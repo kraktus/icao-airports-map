@@ -96,7 +96,7 @@ export class CustomMap {
 }
 
 // the config must show all the earth
-const config: MapConfig = { center: [50, 10], zoom: 2 };
+const config: MapConfig = { center: [0, 0], zoom: 2 };
 
 const customMap = new CustomMap('map', config);
 

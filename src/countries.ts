@@ -1,7 +1,7 @@
-import * as Countries from '../country-borders-simplified-2.geo.json';
 import * as L from 'leaflet';
 import { Airports, Iso2, Airport } from './airport';
 import { countBy, getMostCommon } from './utils';
+import { Borders } from './geojson';
 
 const prefixLength = 1;
 
@@ -89,7 +89,7 @@ export const addGeo = (map: L.Map, arp: Airports) => {
       console.log('geojson is undefined');
     }
   };
-  geojson = L.geoJson(Countries as any, {
+  geojson = L.geoJson(new Borders(prefixLength, arp).makeGeojson(), {
     style: style(prefixesByCountry, arp),
     onEachFeature: onEachFeature(map, resetHighlight),
   });
@@ -108,6 +108,7 @@ const style =
   (feature: any) => {
     //console.log('feature', feature);
     let fillColor = 'black';
+    let fillOpacity = 1;
     // only works for polygon, not multipolygon
     let prefixesOfCountry = undefined;
     if (feature.geometry.type === 'Polygon') {
@@ -123,6 +124,7 @@ const style =
       mostCommonPrefix = getMostCommon(prefixesOfCountry);
       if (mostCommonPrefix !== undefined) {
         fillColor = arp.prefixColor(mostCommonPrefix, prefixLength);
+        fillOpacity = 0.4;
         // console.log(
         //   'fillColor',
         //   fillColor,
@@ -150,6 +152,6 @@ const style =
       opacity: 1,
       color: undefined,
       dashArray: '3',
-      fillOpacity: 0.4,
+      fillOpacity: fillOpacity,
     };
   };

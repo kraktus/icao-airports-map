@@ -1,3 +1,16 @@
+export function groupBy<T, V>(x: T[], key: (t: T) => V): Map<V, T[]> {
+  const res = new Map<V, T[]>();
+  for (const t of x) {
+    const k = key(t);
+    if (res.has(k)) {
+      res.get(k)!.push(t);
+    } else {
+      res.set(k, [t]);
+    }
+  }
+  return res;
+}
+
 export function countBy<T, V>(x: T[], count: (t: T) => V): Map<V, number> {
   const res = new Map<V, number>();
   for (const t of x) {
