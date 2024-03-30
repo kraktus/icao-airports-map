@@ -10,16 +10,18 @@ export class Borders {
     this.arp = arp;
   }
 
-  getPrefixes(gps_codes: string[]): Map<string, number> {
+  private getPrefixes(gps_codes: string[]): Map<string, number> {
     return countBy(gps_codes, (gps_code: string) =>
       gps_code.slice(0, this.prefixLength),
     );
   }
-  getPrefix(feature: any) {
-    getMostCommon(this.getPrefixes(feature.properties.airports_gps_code));
+  private getPrefix(feature: any): string {
+    return getMostCommon(
+      this.getPrefixes(feature.properties.airports_gps_code),
+    )!;
   }
 
-  toMultiPolygon(polygons: any[]) {
+  private toMultiPolygon(polygons: any[]) {
     const coords = polygons.map(polygon => polygon.geometry.coordinates);
     const airports = polygons.flatMap(
       polygon => polygon.properties.airports_gps_code,
@@ -32,7 +34,7 @@ export class Borders {
         // airports should be non-empty
         color: this.arp.prefixColor(
           getMostCommon(this.getPrefixes(airports))!,
-          1,
+          this.prefixLength,
         ),
       },
     };
@@ -44,6 +46,14 @@ export class Borders {
     });
 
     const polyByPrefix = groupBy(withAirports, this.getPrefix.bind(this));
+    console.log(
+      'polyByPrefix',
+      polyByPrefix,
+      'withAirports[0]',
+      withAirports[0],
+      'test getPrefix',
+      this.getPrefix(withAirports[0]),
+    );
     const multiPolygons = Array.from(polyByPrefix.values()).map(
       this.toMultiPolygon.bind(this),
     );

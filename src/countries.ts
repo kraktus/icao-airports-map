@@ -2,8 +2,10 @@ import * as L from 'leaflet';
 import { Airports, Iso2, Airport } from './airport';
 import { countBy, getMostCommon } from './utils';
 import { Borders } from './geojson';
+import * as Countries from '../country-borders-simplified-2.geo.json';
 
-const prefixLength = 1;
+const prefixLength = 2;
+const debug = true;
 
 const toBr = (...l: string[]) => {
   // place each element into <b> /<b><br /> tag
@@ -11,27 +13,35 @@ const toBr = (...l: string[]) => {
 };
 
 const text = (...l: (string | undefined)[]) => {
-  return toBr(
-    `id ${l[0]}`,
-    `nb arps ${l[1]}`,
-    `prefix ${l[2]}`,
-    `country code: ${l[3]}`,
-  );
+  return debug
+    ? toBr(
+        `id ${l[0]}`,
+        `nb arps ${l[1]}`,
+        `prefix ${l[2]}`,
+        `country code: ${l[3]}`,
+      )
+    : toBr(`nb arps ${l[0]}`, `prefix ${l[1]}`);
+};
+const textProp = (feature: any, p: any) => {
+  return debug
+    ? text(
+        feature.id,
+        p.airports_gps_code.length,
+        getMostCommon(getPrefixes(p.airports_gps_code)),
+        p.ISO_A2_EH,
+      )
+    : text(
+        p.airports_gps_code.length,
+        getMostCommon(getPrefixes(p.airports_gps_code)),
+      );
 };
 
 // method that we will use to update the control based on feature properties passed
 const update = (div: HTMLElement, feature?: any) => {
-  const p = feature?.properties;
+  const p = debug ? feature?.properties : feature?.geometry.properties;
   return (div.innerHTML =
     '<h4>Airport info</h4>' +
-    (p
-      ? text(
-          feature.id,
-          p.airports_gps_code.length,
-          getMostCommon(getPrefixes(p.airports_gps_code)),
-          p.ISO_A2_EH,
-        )
-      : 'Hover over a country'));
+    (p ? textProp(feature, p) : 'Hover over a country'));
 };
 
 const getInfo = () => {
@@ -54,7 +64,7 @@ let info = getInfo(); // FIXME, temporary, eventually move this to customMap
 const highlightFeature = (e: L.LeafletMouseEvent) => {
   let layer = e.target;
   layer.setStyle({
-    weight: 5,
+    weight: 3,
     color: '#666',
     dashArray: '',
     fillOpacity: 0.7,
@@ -78,7 +88,7 @@ const onEachFeature =
 
 export const addGeo = (map: L.Map, arp: Airports) => {
   const prefixesByCountry = arp.prefixesByCountry(prefixLength);
-  console.log('prefixesByCountry', prefixesByCountry);
+  //console.log('prefixesByCountry', prefixesByCountry);
   let geojson: any;
   const resetHighlight = (e: L.LeafletMouseEvent) => {
     if (geojson !== undefined) {
@@ -89,7 +99,11 @@ export const addGeo = (map: L.Map, arp: Airports) => {
       console.log('geojson is undefined');
     }
   };
-  geojson = L.geoJson(new Borders(prefixLength, arp).makeGeojson(), {
+  //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
+  const borders = debug
+    ? Countries
+    : new Borders(prefixLength, arp).makeGeojson();
+  geojson = L.geoJson(borders as any, {
     style: style(prefixesByCountry, arp),
     onEachFeature: onEachFeature(map, resetHighlight),
   });
@@ -107,38 +121,8 @@ const style =
   (prefixesByCountry: Map<Iso2, Map<string, number>>, arp: Airports) =>
   (feature: any) => {
     //console.log('feature', feature);
-    let fillColor = 'black';
-    let fillOpacity = 1;
-    // only works for polygon, not multipolygon
-    let prefixesOfCountry = undefined;
-    if (feature.geometry.type === 'Polygon') {
-      //console.log('before airportsInCountry', countryCode);
-      prefixesOfCountry = getPrefixes(feature.properties.airports_gps_code);
-    }
-    // if (prefixesOfCountry === undefined || prefixesOfCountry.size === 0) {
-    //   //console.log('fallback');
-    //   prefixesOfCountry = prefixesByCountry.get(countryCode);
-    // }
-    let mostCommonPrefix = undefined;
-    if (prefixesOfCountry !== undefined) {
-      mostCommonPrefix = getMostCommon(prefixesOfCountry);
-      if (mostCommonPrefix !== undefined) {
-        fillColor = arp.prefixColor(mostCommonPrefix, prefixLength);
-        fillOpacity = 0.4;
-        // console.log(
-        //   'fillColor',
-        //   fillColor,
-        //   'countryCode',
-        //   countryCode,
-        //   'mostCommonPrefix',
-        //   mostCommonPrefix,
-        //   'feature id',
-        //   feature.id,
-        //   'prefixesOfCountry',
-        //   prefixesOfCountry,
-        // );
-      }
-    }
+    let fillColor = debug ? 'black' : feature.geometry.properties.color;
+    let fillOpacity = 0.4;
     // console.log(
     //   'most common prefix of country',
     //   feature.properties.ISO_A2_EH,
