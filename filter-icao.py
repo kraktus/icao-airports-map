@@ -219,11 +219,11 @@ def write_ts(airports_csv: str) -> None:
         f.write(TS_AIRPORTS.format(airports_csv))
 
 
-def write_geojson_airports(airports: list[Any]) -> None:
+def write_geojson_airports(airports: list[Any], number: int) -> None:
     """write the airports to a geojson file"""
     json.dump(
         {"type": "FeatureCollection", "features": airports},
-        open("country-borders-simplified.geo.json", "w"),
+        open(f"country-borders-simplified-{number}.geo.json", "w"),
         indent=2,
     )
 
@@ -268,7 +268,7 @@ def filter_airports() -> None:
 
 def airports_per_polygon():
     """count number of airports per polygon"""
-    with open("country-borders-simplified.geo.json", "r") as f:
+    with open("country-borders-simplified-1.geo.json", "r") as f:
         geojson = json.load(f)
     updated_geojson = []
     airports = get_airports()
@@ -304,7 +304,7 @@ def airports_per_polygon():
         )
     print("took ", datetime.now() - dep_time)
     print(f"{len(airports.keys())} remaining airports", airports.keys())
-    write_geojson_airports(updated_geojson)
+    write_geojson_airports(updated_geojson, 2)
 
 
 def split_multipolygon():
@@ -325,7 +325,7 @@ def split_multipolygon():
                 )
         else:
             res.append(feature)
-    write_geojson_airports(res)
+    write_geojson_airports(res, 1)
 
 
 def cluster() -> None:

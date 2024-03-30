@@ -1,7 +1,16 @@
+#![warn(clippy::all)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::cargo)]
+#![warn(clippy::style)]
+#![warn(clippy::complexity)]
+#![warn(clippy::perf)]
+#![warn(clippy::correctness)]
+
+
 use anyhow::{Context, Result};
 use csv;
 use geo::{self, Contains, LineString};
-use geojson::{PolygonType, Value::Polygon};
+use geojson::{PolygonType, Value::Polygon, Feature};
 use regex;
 use serde;
 use std::collections::HashMap;
@@ -14,6 +23,11 @@ struct Airport {
     gps_code: String,
     //_iso_country: String,
 }
+
+fn country_borders(n: usize) -> String {
+    format!("../country-borders-simplified-{n}.geo.json")
+}
+
 
 impl From<Airport> for geo::Point<f64> {
     fn from(arp: Airport) -> Self {
@@ -52,6 +66,19 @@ fn _filter_icao(airports: Vec<Airport>) -> HashMap<String, Airport> {
         .collect()
 }
 
+fn write_geojson(updated_geojson: Vec<Feature>) -> Result<()> {
+    let updated_geojson = geojson::FeatureCollection {
+        features: updated_geojson,
+        bbox: None,
+        foreign_members: None,
+    };
+    let serialized = serde_json::to_string_pretty(&updated_geojson)?;
+    std::fs::write(country_borders(2), serialized)?;
+    Ok(())
+}
+
+
+
 fn vec_to_line(vec: &Vec<Vec<f64>>) -> LineString<f64> {
     vec.iter()
         .map(|coord| (coord[0], coord[1]))
@@ -68,9 +95,10 @@ fn polygon_to_polygon(polygon: &PolygonType) -> geo::Polygon {
 }
 
 fn airports_in_polygon() -> Result<()> {
-    let content = std::fs::read_to_string("../country-borders-simplified.geo.json").context("geojson failed")?;
+    let content = std::fs::read_to_string(country_borders(1)).context("geojson failed")?;
     let mut airports = get_airports()?;
     let geojson: geojson::FeatureCollection = content.parse()?;
+    let mut updated_geojson = Vec::new();
     let nb_feature = geojson.features.len();
     let dep_time = std::time::Instant::now();
     for (i, feature) in geojson.features.iter().enumerate() {
@@ -86,26 +114,11 @@ fn airports_in_polygon() -> Result<()> {
             if airport.is_in_polygon(polygon) {
                 arp_in.push(airport.gps_code.clone());
                 airports.remove(&airport.gps_code);
-            } else {
-                if airport.gps_code == "NZSP" {
-                    // known issue because the airport is located exactly at -90°. will be fixed soon
-                    // in the airport db
-                    continue;
-                }
             }
         }
-
-        // updated_geojson.push(Feature {
-        //     geometry: Geometry {
-        //         geo_type: "Polygon".to_string(),
-        //         coordinates: polygon.clone()
-        //     },
-        //     properties: {
-        //         let mut property_map = feature.properties.clone();
-        //         property_map.insert("airports_gps_code".to_string(), arp_in.join(","));
-        //         property_map
-        //     }
-        // });
+        let mut updated_feature = feature.clone();
+        updated_feature.set_property("airports_gps_code", arp_in.join(","));
+        updated_geojson.push(updated_feature);
     }
     println!("took: {:?} to check", dep_time.elapsed());
     println!("airports not in any polygon: {:?}", airports.keys().len());
