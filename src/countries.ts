@@ -11,7 +11,12 @@ const toBr = (...l: string[]) => {
 };
 
 const text = (...l: string[]) => {
-  return toBr(`id ${l[0]}`, `nb arps ${l[1]}`);
+  return toBr(
+    `id ${l[0]}`,
+    `nb arps ${l[1]}`,
+    `prefix ${l[2]}`,
+    `country code: ${l[3]}`,
+  );
 };
 
 // method that we will use to update the control based on feature properties passed
@@ -20,7 +25,12 @@ const update = (div: HTMLElement, feature?: any) => {
   return (div.innerHTML =
     '<h4>Airport info</h4>' +
     (p
-      ? text(feature.id, p.airports_gps_code.length)
+      ? text(
+          feature.id,
+          p.airports_gps_code.length,
+          p.airports_gps_code.slice(0, prefixLength),
+          p.ISO_A2_EH,
+        )
       : 'Hover over a country'));
 };
 
@@ -87,15 +97,6 @@ export const addGeo = (map: L.Map, arp: Airports) => {
   geojson.addTo(map);
 };
 
-// interface GeoFeature {
-//   type: string;
-//   geometry: {
-//     type: string;
-//     coordinates: [number, number][][][];
-//   };
-//   properties: { ISO_A2_EH: string };
-// }
-
 const getPrefixes = (gps_codes: string[]): Map<string, number> => {
   return countBy(gps_codes, (gps_code: string) =>
     gps_code.slice(0, prefixLength),
@@ -106,41 +107,43 @@ const style =
   (prefixesByCountry: Map<Iso2, Map<string, number>>, arp: Airports) =>
   (feature: any) => {
     //console.log('feature', feature);
-    const countryCode = feature.properties.ISO_A2_EH;
     let fillColor = 'blue';
-    if (countryCode !== undefined && countryCode !== '-99') {
-      // only works for polygon, not multipolygon
-      let prefixesOfCountry = undefined;
-      if (feature.geometry.type === 'Polygon') {
-        //console.log('before airportsInCountry', countryCode);
-        prefixesOfCountry = getPrefixes(feature.properties.airports_gps_code);
-      }
-      // if (prefixesOfCountry === undefined || prefixesOfCountry.size === 0) {
-      //   //console.log('fallback');
-      //   prefixesOfCountry = prefixesByCountry.get(countryCode);
-      // }
-      if (countryCode == 'FR') {
-        console.log(
-          'countryCode',
-          countryCode,
-          'prefixesOfCountry',
-          prefixesOfCountry,
-        );
-      }
-      let mostCommonPrefix = undefined;
-      if (prefixesOfCountry !== undefined) {
-        mostCommonPrefix = getMostCommon(prefixesOfCountry);
-        if (mostCommonPrefix !== undefined) {
-          fillColor = arp.prefixColor(mostCommonPrefix, prefixLength);
-        }
-      }
-      // console.log(
-      //   'most common prefix of country',
-      //   feature.properties.ISO_A2_EH,
-      //   mostCommon,
-      //   fillColor,
-      // );
+    // only works for polygon, not multipolygon
+    let prefixesOfCountry = undefined;
+    if (feature.geometry.type === 'Polygon') {
+      //console.log('before airportsInCountry', countryCode);
+      prefixesOfCountry = getPrefixes(feature.properties.airports_gps_code);
     }
+    // if (prefixesOfCountry === undefined || prefixesOfCountry.size === 0) {
+    //   //console.log('fallback');
+    //   prefixesOfCountry = prefixesByCountry.get(countryCode);
+    // }
+    let mostCommonPrefix = undefined;
+    if (prefixesOfCountry !== undefined) {
+      mostCommonPrefix = getMostCommon(prefixesOfCountry);
+      if (mostCommonPrefix !== undefined) {
+        fillColor = arp.prefixColor(mostCommonPrefix, prefixLength);
+        // console.log(
+        //   'fillColor',
+        //   fillColor,
+        //   'countryCode',
+        //   countryCode,
+        //   'mostCommonPrefix',
+        //   mostCommonPrefix,
+        //   'feature id',
+        //   feature.id,
+        //   'prefixesOfCountry',
+        //   prefixesOfCountry,
+        // );
+      }
+    }
+    // console.log(
+    //   'most common prefix of country',
+    //   feature.properties.ISO_A2_EH,
+    //   mostCommon,
+    //   fillColor,
+    // );
+
     return {
       fillColor: fillColor,
       weight: 2,

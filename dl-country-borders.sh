@@ -6,7 +6,11 @@
 cd natural-earth && \
 # It's unclear which field should be taken to represent the country, as natural earth provide no doc
 # https://github.com/nvkelso/natural-earth-vector/issues/153 -select
-ogr2ogr -f GeoJSON -select ISO_A2_EH -s_srs ne_10m_admin_0_countries.prj -t_srs EPSG:4326 country-borders.geo.json ne_10m_admin_0_countries.shp
+#ogr2ogr -f GeoJSON -select ISO_A2_EH -s_srs ne_10m_admin_0_countries.prj -t_srs EPSG:4326 country-borders.geo.json ne_10m_admin_0_countries.shp
+
+# all fields
+# ogr2ogr -f GeoJSON -s_srs ne_10m_admin_0_countries.prj -t_srs EPSG:4326 country-borders-all-fields.geo.json ne_10m_admin_0_countries.shp
+
 
 # with jq, print values of SOV_A3, ADM0_A3, wherever they are
 # jq '.features[].properties | .ISO_A2_EH' country-borders.geo.json

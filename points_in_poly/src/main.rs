@@ -111,7 +111,7 @@ fn airports_in_polygon() -> Result<()> {
             }
         }
         let mut updated_feature = feature.clone();
-        updated_feature.set_property("airports_gps_code", arp_in.join(","));
+        updated_feature.set_property("airports_gps_code", arp_in);
         updated_feature.id = Some(geojson::feature::Id::Number(i.into()));
         updated_geojson.push(updated_feature);
     }
