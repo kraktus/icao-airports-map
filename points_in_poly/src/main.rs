@@ -1,17 +1,14 @@
 #![warn(clippy::all)]
 #![warn(clippy::pedantic)]
-#![warn(clippy::cargo)]
 #![warn(clippy::style)]
 #![warn(clippy::complexity)]
 #![warn(clippy::perf)]
 #![warn(clippy::correctness)]
 
-
 use anyhow::{Context, Result};
 
 use geo::{self, Contains, LineString};
-use geojson::{PolygonType, Value::Polygon, Feature};
-
+use geojson::{Feature, PolygonType, Value::Polygon};
 
 use std::collections::HashMap;
 
@@ -27,7 +24,6 @@ struct Airport {
 fn country_borders(n: usize) -> String {
     format!("../country-borders-simplified-{n}.geo.json")
 }
-
 
 impl From<Airport> for geo::Point<f64> {
     fn from(arp: Airport) -> Self {
@@ -77,9 +73,7 @@ fn write_geojson(updated_geojson: Vec<Feature>) -> Result<()> {
     Ok(())
 }
 
-
-
-fn vec_to_line(vec: &Vec<Vec<f64>>) -> LineString<f64> {
+fn vec_to_line(vec: &[Vec<f64>]) -> LineString<f64> {
     vec.iter()
         .map(|coord| (coord[0], coord[1]))
         .collect::<Vec<_>>()
@@ -91,7 +85,7 @@ fn polygon_to_polygon(polygon: &PolygonType) -> geo::Polygon {
     let holes = copy_vec.split_off(1);
     let line = vec_to_line(&copy_vec[0]);
 
-    geo::Polygon::new(line, holes.iter().map(vec_to_line).collect())
+    geo::Polygon::new(line, holes.iter().map(|x| vec_to_line(x)).collect())
 }
 
 fn airports_in_polygon() -> Result<()> {
