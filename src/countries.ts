@@ -10,7 +10,7 @@ const toBr = (...l: string[]) => {
   return l.map(y => `${y}<br />`).join('');
 };
 
-const text = (...l: string[]) => {
+const text = (...l: (string | undefined)[]) => {
   return toBr(
     `id ${l[0]}`,
     `nb arps ${l[1]}`,
@@ -28,7 +28,7 @@ const update = (div: HTMLElement, feature?: any) => {
       ? text(
           feature.id,
           p.airports_gps_code.length,
-          p.airports_gps_code.slice(0, prefixLength),
+          getMostCommon(getPrefixes(p.airports_gps_code)),
           p.ISO_A2_EH,
         )
       : 'Hover over a country'));
@@ -107,7 +107,7 @@ const style =
   (prefixesByCountry: Map<Iso2, Map<string, number>>, arp: Airports) =>
   (feature: any) => {
     //console.log('feature', feature);
-    let fillColor = 'blue';
+    let fillColor = 'black';
     // only works for polygon, not multipolygon
     let prefixesOfCountry = undefined;
     if (feature.geometry.type === 'Polygon') {
