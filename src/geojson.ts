@@ -1,31 +1,14 @@
 import * as Countries from '../country-borders-simplified-2.geo.json';
 import { groupBy, countBy, getMostCommon } from './utils';
 import { Airports } from './airport';
+import { Info } from './info';
 
 export class Borders {
-  filter: string;
+  info: Info;
   arp: Airports;
-  constructor(filter: string, arp: Airports) {
-    this.filter = filter;
+  constructor(info: Info, arp: Airports) {
+    this.info = info;
     this.arp = arp;
-  }
-
-  private prefixLength(): number {
-    if (this.filter === '') {
-      return 1;
-    }
-    return this.filter.length;
-  }
-
-  private getPrefixes(gps_codes: string[]): Map<string, number> {
-    return countBy(gps_codes, (gps_code: string) =>
-      gps_code.slice(0, this.prefixLength()),
-    );
-  }
-  private getPrefix(feature: any): string {
-    return getMostCommon(
-      this.getPrefixes(feature.properties.airports_gps_code),
-    )!;
   }
 
   private toMultiPolygon(polygons: any[]) {
@@ -40,8 +23,8 @@ export class Borders {
         airports_gps_code: airports,
         // airports should be non-empty
         color: this.arp.prefixColor(
-          getMostCommon(this.getPrefixes(airports))!,
-          this.prefixLength(),
+          getMostCommon(this.info.getPrefixes(airports))!,
+          this.info.prefixLength(),
         ),
       },
     };
@@ -52,15 +35,17 @@ export class Borders {
       return feature.properties.airports_gps_code.length > 0;
     });
 
-    const polyByPrefix = groupBy(withAirports, this.getPrefix.bind(this));
-    console.log(
-      'polyByPrefix',
-      polyByPrefix,
-      'withAirports[0]',
-      withAirports[0],
-      'test getPrefix',
-      this.getPrefix(withAirports[0]),
+    const polyByPrefix = groupBy(withAirports, (feature: any) =>
+      this.info.getPrefix(feature.properties.airports_gps_code),
     );
+    // console.log(
+    //   'polyByPrefix',
+    //   polyByPrefix,
+    //   'withAirports[0]',
+    //   withAirports[0],
+    //   'test getPrefix',
+    //   this.getPrefix(withAirports[0]),
+    // );
     const multiPolygons = Array.from(polyByPrefix.values()).map(
       this.toMultiPolygon.bind(this),
     );

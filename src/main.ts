@@ -29,6 +29,7 @@ export class CustomMap {
   constructor(elementId: string, config: MapConfig) {
     this.map = L.map(elementId).setView(config.center, config.zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      noWrap: true,
       attribution: '© OpenStreetMap contributors',
       //maxZoom: 8,
     }).addTo(this.map);
@@ -71,7 +72,8 @@ export class CustomMap {
   }
 
   addGeoJson(geoJson: any) {
-    L.geoJSON(geoJson).addTo(this.map);
+    this.layers.push(geoJson);
+    geoJson.addTo(this.map);
   }
 
   clear() {
@@ -102,11 +104,13 @@ const config: MapConfig = { center: [0, 0], zoom: 2 };
 const customMap = new CustomMap('map', config);
 const info = new Info('');
 
-const main = (filter: string) => {
+export const main = (filter: string) => {
   console.log('main called');
+  // capitalise filter
+  filter = filter.toUpperCase();
   customMap.clear();
-  info.update(filter);
-  addGeo(customMap.map, airports, info);
+  info.setFilter(filter);
+  addGeo(customMap, airports, info);
 
   // DEBUG
   Array.from(airports.getAllPrefixes(1).entries()).map(([i, ard]) => {
@@ -128,13 +132,16 @@ const main = (filter: string) => {
 };
 main('');
 // get info by class name
-const infoDiv = document.getElementsByClassName('info')[0];
+const infoDiv = document.getElementsByClassName('info')[0] as HTMLElement;
 const infoInput = document.getElementById('info-input') as HTMLInputElement;
 
 console.log('infoInput', infoDiv);
 // listen to input text changing
-infoDiv.addEventListener('keypress', () => {
-  console.log('infoInput', infoInput.value);
-  main(infoInput.value);
+infoDiv.addEventListener('click', (e: any) => {
+  console.log('click event', e.target.id);
+  if (e.target.id === 'info-button') {
+    console.log('input event', infoInput.value);
+    main(infoInput.value);
+  }
 });
 console.log('callback added');

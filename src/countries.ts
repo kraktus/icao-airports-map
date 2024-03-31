@@ -3,6 +3,7 @@ import { Airports, Iso2, Airport } from './airport';
 import { countBy, getMostCommon } from './utils';
 import { Borders } from './geojson';
 import { Info } from './info';
+import { CustomMap } from './main';
 import { debug } from './config';
 import * as Countries from '../country-borders-simplified-2.geo.json';
 
@@ -32,7 +33,7 @@ const onEachFeature =
     });
   };
 
-export const addGeo = (map: L.Map, arp: Airports, info: Info) => {
+export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   let geojson: any; // required for resetHighlight
   const resetHighlight = (e: L.LeafletMouseEvent) => {
     if (geojson !== undefined) {
@@ -43,15 +44,13 @@ export const addGeo = (map: L.Map, arp: Airports, info: Info) => {
     }
   };
   //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
-  const borders = debug
-    ? Countries
-    : new Borders(info.filter, arp).makeGeojson();
+  const borders = debug ? Countries : new Borders(info, arp).makeGeojson();
   geojson = L.geoJson(borders as any, {
     style: style(arp),
-    onEachFeature: onEachFeature(map, resetHighlight, info),
+    onEachFeature: onEachFeature(customMap.map, resetHighlight, info),
   });
-  info.addTo(map);
-  geojson.addTo(map);
+  info.addTo(customMap.map);
+  customMap.addGeoJson(geojson);
 };
 
 const style = (arp: Airports) => (feature: any) => {
