@@ -3,7 +3,7 @@ import { Airports, Iso2, Airport } from './airport';
 import { countBy, getMostCommon } from './utils';
 import { Borders } from './geojson';
 import { Info } from './info';
-import { CustomMap } from './main';
+import { CustomMap, main } from './main';
 import { debug } from './config';
 import * as Countries from '../country-borders-simplified-2.geo.json';
 
@@ -19,8 +19,9 @@ const highlightFeature = (info: Info) => (e: L.LeafletMouseEvent) => {
   layer.bringToFront();
 };
 
-const zoomToFeature = (map: L.Map) => (e: L.LeafletMouseEvent) => {
+const zoomToFeature = (info: Info, map: L.Map) => (e: L.LeafletMouseEvent) => {
   map.fitBounds(e.target.getBounds());
+  main(info.getPrefix(e.target.feature.geometry.properties.airports_gps_code));
 };
 
 const onEachFeature =
@@ -29,7 +30,7 @@ const onEachFeature =
     layer.on({
       mouseover: highlightFeature(info),
       mouseout: resetHighlight,
-      click: zoomToFeature(map),
+      click: zoomToFeature(info, map),
     });
   };
 

@@ -31,6 +31,10 @@ export class CustomMap {
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       noWrap: true,
       attribution: '© OpenStreetMap contributors',
+      bounds: [
+        [-90, -180],
+        [90, 180],
+      ],
       //maxZoom: 8,
     }).addTo(this.map);
     L.control.scale().addTo(this.map);
