@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import { Airports, Iso2, Airport } from './airport';
 import { countBy, getMostCommon } from './utils';
-import { Borders } from './geojson';
+import { Borders } from './borders';
 import { Info } from './info';
 import { CustomMap, main } from './main';
 import { debug } from './config';
