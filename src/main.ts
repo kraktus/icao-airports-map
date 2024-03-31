@@ -5,6 +5,7 @@ import { airports, Airport } from './airport';
 import { colors } from './colors';
 import hull from 'hull.js';
 import { addGeo } from './countries';
+import { Info } from './info';
 
 //  L.geoJSON(geojsonFeature).addTo(map);
 
@@ -40,7 +41,7 @@ export class CustomMap {
     marker.bindPopup(popupText);
     this.layers.push(marker);
   }
-  // addcircle
+
   addCircle(
     lat: number,
     lng: number,
@@ -56,7 +57,7 @@ export class CustomMap {
     circle.bindPopup(popupText);
     this.layers.push(circle);
   }
-  // add polygon
+
   addPolygon(points: [number, number][], color: string = 'red') {
     const polygon = L.polygon(points, {
       color: color,
@@ -99,44 +100,41 @@ export class CustomMap {
 const config: MapConfig = { center: [0, 0], zoom: 2 };
 
 const customMap = new CustomMap('map', config);
+const info = new Info('');
 
-document.getElementById('slider')!.addEventListener('input', () => {
-  main(Number((document.getElementById('slider') as HTMLInputElement).value));
-});
-
-addGeo(customMap.map, airports);
-
-// js foreach combined with index
-const sliceSize = 1;
-const main = (sliceIndex: number) => {
+const main = (filter: string) => {
+  console.log('main called');
   customMap.clear();
-  Array.from(airports.getAllPrefixes(1).entries())
-    //.slice(sliceSize * sliceIndex, (sliceIndex + 1) * sliceSize)
-    // .filter(
-    //   ([_, ard]) =>
-    //     ard[0].gps_code.startsWith('SO') || ard[0].gps_code.startsWith('SY'),
-    // )
-    .map(([i, ard]) => {
-      // console.log(
-      //   'first airport code: ',
-      //   ard[0].gps_code,
-      //   'number of aprts: ',
-      //   ard.length,
-      // );
-      // console.log('all values', ard);
-      const color = colors[i % colors.length];
+  info.update(filter);
+  addGeo(customMap.map, airports, info);
 
-      // for (const airport of ard) {
-      //   customMap.addCircle(
-      //     airport.latitude_deg,
-      //     airport.longitude_deg,
-      //     `${airport.gps_code}: ${airport.name}`,
-      //     color,
-      //   );
-      // }
-      //const hullPoints = customMap.hullOf(ard);
-      // @ts-ignore
-      //customMap.addPolygon(hullPoints, color);
-    });
+  // DEBUG
+  Array.from(airports.getAllPrefixes(1).entries()).map(([i, ard]) => {
+    const color = colors[i % colors.length];
+
+    // for (const airport of ard) {
+    //   customMap.addCircle(
+    //     airport.latitude_deg,
+    //     airport.longitude_deg,
+    //     `${airport.gps_code}: ${airport.name}`,
+    //     color,
+    //   );
+    // }
+    //const hullPoints = customMap.hullOf(ard);
+    // @ts-ignore
+    //customMap.addPolygon(hullPoints, color);
+  });
+  console.log('end of main');
 };
-main(0);
+main('');
+// get info by class name
+const infoDiv = document.getElementsByClassName('info')[0];
+const infoInput = document.getElementById('info-input') as HTMLInputElement;
+
+console.log('infoInput', infoDiv);
+// listen to input text changing
+infoDiv.addEventListener('keypress', () => {
+  console.log('infoInput', infoInput.value);
+  main(infoInput.value);
+});
+console.log('callback added');

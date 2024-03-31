@@ -3,16 +3,23 @@ import { groupBy, countBy, getMostCommon } from './utils';
 import { Airports } from './airport';
 
 export class Borders {
-  prefixLength: number; // make private once finished
+  filter: string;
   arp: Airports;
-  constructor(prefixLength: number, arp: Airports) {
-    this.prefixLength = prefixLength;
+  constructor(filter: string, arp: Airports) {
+    this.filter = filter;
     this.arp = arp;
+  }
+
+  private prefixLength(): number {
+    if (this.filter === '') {
+      return 1;
+    }
+    return this.filter.length;
   }
 
   private getPrefixes(gps_codes: string[]): Map<string, number> {
     return countBy(gps_codes, (gps_code: string) =>
-      gps_code.slice(0, this.prefixLength),
+      gps_code.slice(0, this.prefixLength()),
     );
   }
   private getPrefix(feature: any): string {
@@ -34,7 +41,7 @@ export class Borders {
         // airports should be non-empty
         color: this.arp.prefixColor(
           getMostCommon(this.getPrefixes(airports))!,
-          this.prefixLength,
+          this.prefixLength(),
         ),
       },
     };
