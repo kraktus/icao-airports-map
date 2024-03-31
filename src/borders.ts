@@ -32,7 +32,12 @@ export class Borders {
 
   makeGeojson() {
     const withAirports = Countries.features.filter(feature => {
-      return feature.properties.airports_gps_code.length > 0;
+      return (
+        feature.properties.airports_gps_code.length > 0 &&
+        this.info
+          .getPrefix(feature.properties.airports_gps_code)
+          .startsWith(this.info.filter)
+      );
     });
 
     const polyByPrefix = groupBy(withAirports, (feature: any) =>
