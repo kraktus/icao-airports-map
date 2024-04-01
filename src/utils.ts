@@ -24,6 +24,21 @@ export function countBy<T, V>(x: T[], count: (t: T) => V): Map<V, number> {
   return res;
 }
 
+export function mergeCountBy<T, V>(
+  y: Map<V, number>,
+  z: Map<V, number>,
+): Map<V, number> {
+  const x = new Map<V, number>(y);
+  for (const [k, v] of z.entries()) {
+    if (x.has(k)) {
+      x.set(k, x.get(k)! + v);
+    } else {
+      x.set(k, v);
+    }
+  }
+  return x;
+}
+
 export function getMostCommon<V>(x: Map<V, number>): V | undefined {
   if (x.size === 0) {
     return undefined;

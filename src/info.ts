@@ -30,7 +30,7 @@ export class Info {
       return this._div;
     };
   }
-  private div() {
+  private div(): HTMLElement {
     return this.info._div;
   }
 
@@ -45,6 +45,10 @@ export class Info {
   }
   getPrefix(gps_codes: string[]): string {
     return getMostCommon(this.getPrefixes(gps_codes))!;
+  }
+
+  getGpsCodePrefix(gps_code: string): string {
+    return gps_code.slice(0, this.prefixLength());
   }
 
   setFilter(filter: string) {
