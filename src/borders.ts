@@ -1,20 +1,21 @@
 import * as FeatureCollection from '../country-borders-simplified-2.geo.json';
-import { groupBy, countBy, getMostCommon, mergeCountBy, fold } from './utils';
+import { groupBy, countBy, getMostCommon, mergeCountBy, fold, mapValues, setOf } from './utils';
 import { Airport, Airports, Oaci } from './airport';
 import { Info } from './info';
-import { qualifiedMajority } from './config';
+import {qualifiedMajority} from './config';
+import {Feature, MultiPolygon, MultiPoint, GeoJsonProperties, Polygon, Geometry} from 'geojson';
 
-interface Feature {
-  geometry: { coordinates: number[][][]; type: string };
-  id: number;
-  properties: { ISO_A2_EH: string; airports_gps_code: string[] };
-  type: string;
-}
+// interface LocalFeature {
+//   geometry: { coordinates: number[][][]; type: string };
+//   id: number;
+//   properties: { ISO_A2_EH: string; airports_gps_code: string[] };
+//   type: string;
+// }
 
 // TODO, should these empty features be removed by rust directly?
-const Countries: Feature[] = FeatureCollection.features.filter(
+const Countries: Feature<Polygon>[] = FeatureCollection.features.filter(
   feature => feature.properties.airports_gps_code.length > 0,
-);
+) as Feature<Polygon>[];
 
 export class Borders {
   info: Info;
@@ -24,59 +25,38 @@ export class Borders {
     this.arp = arp;
   }
 
-  // private toMultiPolygon(borders: Border[]) {
-  //   const coords = borders.map(border => border.feature.geometry.coordinates);
-  //   const airports = borders.flatMap(
-  //     border => border.feature.properties.airports_gps_code,
-  //   );
-  //   return {
-  //     type: 'MultiPolygon',
-  //     coordinates: coords,
-  //     properties: {
-  //       airports_gps_code: airports,
-  //       // airports should be non-empty
-  //       color: this.arp.prefixColor(
-  //         getMostCommon(this.info.getPrefixes(airports))!,
-  //         this.info.prefixLength(),
-  //       ),
-  //     },
-  //   };
-  // }
-
-  // return the multipolygon of the prefix + the minority airports
-  makeGeojson(): [any, Airport[]][] {
-    const withAirports: Border[] = Countries.map(feature =>
-      Border.new(this.info, [feature]),
+  // map by prefix
+  makeGeojson(): Map<string, GeoData> {
+    const withAirports: Border[] = Countries.map(
+      feature => Border.new(this.info, [feature]),
     ).filter(border => border.prefix().startsWith(this.info.filter));
 
     const polyByPrefix: Map<string, Border[]> = groupBy(
       withAirports,
       (border: Border) => border.prefix(),
     );
-    console.log('polyByPrefix', polyByPrefix);
-    // for (const [prefix, feature] of polyByPrefix.entries()) {
-    //   const x = countBy(feature.properties, (gps_code: any) =>
-    //     this.info.getGpsCodePrefix(gps_code),
-    //   );
-    // }
-    // console.log(
-    //   'polyByPrefix',
-    //   polyByPrefix,
-    //   'withAirports[0]',
-    //   withAirports[0],
-    //   'test getPrefix',
-    //   this.getPrefix(withAirports[0]),
-    // );
-    const multiPolygons = Array.from(polyByPrefix.values())
-      .map(mergeBorders)
-      .map(border => border.toData(this.info, this.arp));
-    return multiPolygons;
+    const mergedBorders: Map<string, Border> = mapValues(polyByPrefix, mergeBorders);
+    // why doesn't flaMap on iterator work?
+    const minorityAirports = Array.from(mergedBorders.values()).flatMap(border => border.minorityAirports());
+    const minorityAirportsByPrefix = this.info.groupByPrefixes(minorityAirports);
+    const geoDataMap = new Map<string, GeoData>();
+    for (const prefix of this.arp.listPrefix(this.info.prefixLength())) {
+      const border = mergedBorders.get(prefix);
+      let feature;
+      if (border) {
+        feature = border.toMultiPolygon(this.info, this.arp);
+      }
+      const minority = minorityAirportsByPrefix.get(prefix) || [];
+      const color = this.arp.prefixColor(prefix, this.info.prefixLength());
+      geoDataMap.set(prefix, { feature, airports: this.arp.byIdents(minority), color });
+    }
+    return geoDataMap
   }
 }
 
 const mergeBorders = (borders: Border[]): Border => {
   return borders.reduce((acc, border) => acc.merge(border));
-};
+}
 
 class Border {
   // we know the airports are not empty
@@ -84,26 +64,22 @@ class Border {
   private _prefix: string | undefined; // memoize
   private constructor(
     prefixes: Map<string, number>,
-    readonly features: Feature[],
+    readonly features: Feature<Polygon>[],
   ) {
     this.prefixes = prefixes;
   }
 
-  static new(info: Info, features: Feature[]): Border {
-    let airports = features.flatMap(
-      feature => feature.properties.airports_gps_code,
-    );
-    let prefixes = info.getPrefixes(airports);
+  static new(info: Info, features: Feature<Polygon>[]): Border {
+    let airports = features.flatMap(feature => feature.properties!.airports_gps_code);
+    let prefixes = info.countByPrefixes(airports);
     return new Border(prefixes, features);
   }
 
   private airports(): Oaci[] {
-    return this.features.flatMap(f => f.properties.airports_gps_code);
+    return this.features.flatMap(f => f.properties!.airports_gps_code);
   }
-  private minorityAirports(): Oaci[] {
-    return this.airports().filter(
-      airport => !airport.startsWith(this.prefix()),
-    );
+  minorityAirports(): Oaci[] {
+    return this.airports().filter(airport => !airport.startsWith(this.prefix()));
   }
 
   merge = (border: Border): Border => {
@@ -126,67 +102,86 @@ class Border {
     // nb airports not starting by prefix
     const totalAirports = fold(this.prefixes.values(), (a, b) => a + b);
     const minorityAirports = this.minorityAirports();
-    const majorityRatio =
-      (totalAirports - minorityAirports.length) / totalAirports;
+    const majorityRatio = (totalAirports - minorityAirports.length)/totalAirports;
     const shouldShowPolygon = majorityRatio > qualifiedMajority;
     return { minorityAirports, shouldShowPolygon };
-  }
-
-  toGeojson(info: Info, arp: Airports): any {
-    const { minorityAirports, shouldShowPolygon } = this.shouldShowPolygon();
-    const features = [];
-    const props = {
-      airports_gps_code: this.airports(),
-      color: arp.prefixColor(this.prefix(), info.prefixLength()),
-    };
-    if (minorityAirports.length > 0) {
-      const multiPoints = toMultiPoints(arp.byIdents(minorityAirports), props);
-      features.push(multiPoints);
-    }
-    if (shouldShowPolygon) {
-      const multiPolygon = this.toMultiPolygon(info, arp, props);
-      features.push(multiPolygon);
     }
 
-    return {
-      type: 'FeatureCollection',
-      features: features,
-      properties: props,
-    };
+  // TODO: reintroduce the notion of `shouldShowPolygon` based on majority qualification
+  //
+  // toData(info: Info, arp: Airports): [any, Airport[]] {
+  //   const { minorityAirports, shouldShowPolygon } = this.shouldShowPolygon();
+  //   const props = {
+  //       airports_gps_code: this.airports(),
+  //       color: arp.prefixColor(
+  //         this.prefix(),
+  //         info.prefixLength(),
+  //       ),
+  //     }
+  //   const multiPolygon = this.toMultiPolygon(info, arp, props);
+  //   return [multiPolygon, arp.byIdents(minorityAirports)];
+
+  // }
+
+  private properties(info: Info, arp: Airports): GeoJsonProperties {
+      return {
+        airports_gps_code: this.airports(),
+        color: arp.prefixColor(
+          this.prefix(),
+          info.prefixLength(),
+        ),
+      }
   }
 
-  toData(info: Info, arp: Airports): [any, Airport[]] {
-    const { minorityAirports, shouldShowPolygon } = this.shouldShowPolygon();
-    const props = {
-      airports_gps_code: this.airports(),
-      color: arp.prefixColor(this.prefix(), info.prefixLength()),
-    };
-    const multiPolygon = this.toMultiPolygon(info, arp, props);
-    return [multiPolygon, arp.byIdents(minorityAirports)];
-  }
-
-  private toMultiPolygon(info: Info, arp: Airports, props: Object) {
+  // FIXME for now always return the polygon, even though the qualified majority might not be hold
+  toMultiPolygon(info: Info, arp: Airports): Feature<MultiPolygon> {
     const coords = this.features.map(f => f.geometry.coordinates);
-    return {
-      type: 'MultiPolygon',
-      coordinates: coords,
-      properties: props,
-    };
+    return writeMultiPolygon(
+      coords,
+      this.properties(info, arp))
   }
 }
 
-const toMultiPoints = (airports: Airport[], props: Object): any => {
-  return {
-    type: 'MultiPoint',
-    coordinates: airports.map(airport => [
+const toMultiPoints = (airports: Airport[], props: GeoJsonProperties): Feature<MultiPoint> => {
+  return writemultiPoint(airports.map(airport => [
       airport.longitude_deg,
       airport.latitude_deg,
     ]),
-    properties: props,
+    props
+    )
   };
-};
 
+const writemultiPoint = (coords: number[][], props: GeoJsonProperties): Feature<MultiPoint> => {
+  return {
+    type: 'Feature',
+    geometry: {
+    type: 'MultiPoint',
+    coordinates: coords
+  },
+  properties: props
+};
+}
+
+const writeMultiPolygon = (coords: number[][][][],props: GeoJsonProperties): Feature<MultiPolygon> => {
+  return {
+    type: 'Feature',
+    geometry: {
+    type: 'MultiPolygon',
+    coordinates: coords
+  },
+    properties: props
+};
+}
 interface ShouldShowPolygon {
   minorityAirports: Oaci[];
   shouldShowPolygon: boolean;
+}
+
+// for the same prefix
+export interface GeoData {
+  // feature is always multipolygon in this case
+  feature?: Feature; // TODO add geojson package or typing
+  // airports that are outside the multipolygon, and are minority in other multipolygons
+  airports: Airport[];
+  color: string; // for easier access
 }

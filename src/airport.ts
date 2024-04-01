@@ -50,7 +50,7 @@ export const toCircleMarker = (
     color: color,
     fillColor: color,
     fillOpacity: fillOpacity,
-    radius: 1,
+    radius: 2,
   });
 };
 

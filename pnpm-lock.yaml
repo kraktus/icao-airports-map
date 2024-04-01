@@ -5,6 +5,9 @@ settings:
   excludeLinksFromLockfile: false
 
 dependencies:
+  '@types/geojson':
+    specifier: ^7946.0.14
+    version: 7946.0.14
   '@types/papaparse':
     specifier: ^5.3.14
     version: 5.3.14

@@ -1,6 +1,7 @@
 import * as L from 'leaflet';
-import { countBy, getMostCommon } from './utils';
+import { countBy, getMostCommon, groupBy } from './utils';
 import { debug } from './config';
+import { Oaci } from './airport';
 
 const toBr = (...l: string[]) => {
   // place each element into <b> /<b><br /> tag
@@ -38,16 +39,22 @@ export class Info {
     return this.filter.length + 1;
   }
 
-  getPrefixes(gps_codes: string[]): Map<string, number> {
-    return countBy(gps_codes, (gps_code: string) =>
-      gps_code.slice(0, this.prefixLength()),
-    );
+  countByPrefixes(gps_codes: Oaci[]): Map<string, number> {
+    return countBy(gps_codes, this.getGpsCodePrefix.bind(this));
   }
-  getPrefix(gps_codes: string[]): string {
-    return getMostCommon(this.getPrefixes(gps_codes))!;
+  groupByPrefixes(gps_codes: Oaci[]): Map<string, Oaci[]> {
+    return groupBy(gps_codes, this.getGpsCodePrefix.bind(this));
   }
 
-  getGpsCodePrefix(gps_code: string): string {
+  // assume non-empty array
+  getPrefix(gps_codes: Oaci[]): string {
+    if (gps_codes.length === 0) {
+      throw new Error('gps_codes array is empty!');
+    }
+    return getMostCommon(this.countByPrefixes(gps_codes))!;
+  }
+
+  getGpsCodePrefix(gps_code: Oaci): string {
     return gps_code.slice(0, this.prefixLength());
   }
 

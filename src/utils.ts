@@ -11,6 +11,21 @@ export function groupBy<T, V>(x: T[], key: (t: T) => V): Map<V, T[]> {
   return res;
 }
 
+export function mergeGroupBy<T, V>(
+  y: Map<V, T[]>,
+  z: Map<V, T[]>,
+): Map<V, T[]> {
+  const x = new Map<V, T[]>(y);
+  for (const [k, v] of z.entries()) {
+    if (x.has(k)) {
+      x.set(k, x.get(k)!.concat(v));
+    } else {
+      x.set(k, v);
+    }
+  }
+  return x;
+}
+
 export function countBy<T, V>(x: T[], count: (t: T) => V): Map<V, number> {
   const res = new Map<V, number>();
   for (const t of x) {
@@ -20,6 +35,25 @@ export function countBy<T, V>(x: T[], count: (t: T) => V): Map<V, number> {
     } else {
       res.set(v, 1);
     }
+  }
+  return res;
+}
+
+export function mapValues<K, V, W>(x: Map<K, V>, f: (v: V) => W): Map<K, W> {
+  const res = new Map<K, W>();
+  for (const [k, v] of x.entries()) {
+    res.set(k, f(v));
+  }
+  return res;
+}
+
+export function setOf<T>(x: Iterable<T>, y: Iterable<T>): Set<T> {
+  const res = new Set<T>();
+  for (const z of x) {
+    res.add(z);
+  }
+  for (const z of y) {
+    res.add(z);
   }
   return res;
 }

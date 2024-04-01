@@ -1,7 +1,7 @@
 import * as L from 'leaflet';
 import { Airports, Iso2, Airport, toCircle, toCircleMarker } from './airport';
 import { countBy, getMostCommon } from './utils';
-import { Borders } from './borders';
+import { Borders, GeoData } from './borders';
 import { Info } from './info';
 import { CustomMap, main } from './main';
 import { debug } from './config';
@@ -30,6 +30,7 @@ let currentlyHighlighted: L.Layer | undefined = undefined;
 const resetHighlight = (info: Info) => (e: L.LeafletMouseEvent) => {
   if (currentlyHighlighted !== undefined) {
     info.update();
+    // @ts-ignore
     currentlyHighlighted.setStyle(defaultStyle);
   } else {
     console.log('currentlyHighlighted is undefined');
@@ -67,18 +68,22 @@ const onEachFeature =
 export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
   const layers: L.Layer[] = [];
-  const foo = new Borders(info, arp).makeGeojson();
-  for (const [feature, minorityAirports] of foo) {
-    console.log('feature feature', feature);
-    const color = feature.properties.color;
-    console.log('color', color);
-    const airportCircles = minorityAirports.map(a => toCircleMarker(a, color));
+  const geoDataMap = new Borders(info, arp).makeGeojson();
+  for (const [prefix, geoData] of geoDataMap) {
+    const layerElm: any[] = [];
+    console.log('geoData.feature', geoData.feature);
+    const color = geoData.color;
+    console.log('geoData.color', color);
+    const airportCircles = geoData.airports.map(a => toCircleMarker(a, color));
     airportCircles.forEach(circle => {
       circle.addTo(customMap.map);
     });
-    const multiPolygon = L.geoJson(feature, { style: style(arp) });
-    //customMap.addGeoJson(multiPolygon);
-    const layer = L.featureGroup([multiPolygon, ...airportCircles]);
+    if (geoData.feature !== undefined) {
+      const multiPolygon = L.geoJson(geoData.feature, { style: style(arp) });
+      layerElm.push(multiPolygon);
+    }
+    layerElm.concat(airportCircles);
+    const layer = L.featureGroup(layerElm);
     layer.on({
       mouseover: highlightFeature(info),
       mouseout: resetHighlight(info),
