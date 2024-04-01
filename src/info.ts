@@ -11,11 +11,11 @@ const text = (...l: (string | undefined)[]) => {
   return debug
     ? toBr(
         `id ${l[0]}`,
-        `nb arps ${l[1]}`,
-        `prefix ${l[2]}`,
+        `${l[1]} airports`,
+        `ICAO prefix: <b>${l[2]}</b>`,
         `country code: ${l[3]}`,
       )
-    : toBr(`nb arps ${l[0]}`, `prefix ${l[1]}`);
+    : toBr(`${l[0]} airports`, `ICAO prefix:  <b>${l[1]}</b>`);
 };
 
 export class Info {

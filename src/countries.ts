@@ -57,7 +57,7 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
 const style = (arp: Airports) => (feature: any) => {
   //console.log('feature', feature);
   let fillColor = debug ? 'black' : feature.geometry.properties.color;
-  let fillOpacity = 0.4;
+  let fillOpacity = 0.6;
   // console.log(
   //   'most common prefix of country',
   //   feature.properties.ISO_A2_EH,
