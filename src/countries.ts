@@ -52,7 +52,7 @@ const highlightFeature = (info: Info) => (e: L.LeafletMouseEvent) => {
 
 const zoomToFeature = (info: Info, map: L.Map) => (e: L.LeafletMouseEvent) => {
   map.fitBounds(e.target.getBounds());
-  main(info.getPrefix(e.target.feature.geometry.properties.airports_gps_code));
+  main(info.getPrefix(e.target.feature.properties.airports_gps_code));
 };
 
 const onEachFeature =
@@ -103,7 +103,7 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
 
 const style = (arp: Airports) => (feature: any) => {
   console.log('feature', feature);
-  let fillColor = debug ? 'black' : feature.geometry.properties.color;
+  let fillColor = debug ? 'black' : feature.properties.color;
   // console.log(
   //   'most common prefix of country',
   //   feature.properties.ISO_A2_EH,
