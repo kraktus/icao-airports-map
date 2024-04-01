@@ -180,7 +180,7 @@ interface ShouldShowPolygon {
 // for the same prefix
 export interface GeoData {
   // feature is always multipolygon in this case
-  feature?: Feature; // TODO add geojson package or typing
+  feature?: Feature<MultiPolygon>; // TODO add geojson package or typing
   // airports that are outside the multipolygon, and are minority in other multipolygons
   airports: Airport[];
   color: string; // for easier access

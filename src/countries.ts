@@ -6,6 +6,7 @@ import { Info } from './info';
 import { CustomMap, main } from './main';
 import { debug } from './config';
 import * as Countries from '../country-borders-simplified-2.geo.json';
+import {Feature, MultiPolygon} from 'geojson';
 
 const fillOpacity = 0.6;
 
@@ -24,8 +25,14 @@ const defaultStyle = {
   fillOpacity: fillOpacity,
 };
 
+// find a better way! But documentation is sparse...
+const getFeature = (e: any): Feature => {
+  return (Object.values(e.target._layers)[0] as any).feature
+}
+
 // Global grr, but hard to do better
 let currentlyHighlighted: L.Layer | undefined = undefined;
+let oldStyle: any = undefined; // WIP
 
 const resetHighlight = (info: Info) => (e: L.LeafletMouseEvent) => {
   if (currentlyHighlighted !== undefined) {
@@ -37,33 +44,31 @@ const resetHighlight = (info: Info) => (e: L.LeafletMouseEvent) => {
   }
 };
 
-const highlightFeature = (info: Info) => (e: L.LeafletMouseEvent) => {
+const highlightFeature = (info: Info, feature?: Feature<MultiPolygon>) => (e: L.LeafletMouseEvent) => {
   let layer = e.target;
   currentlyHighlighted = layer;
+  oldStyle = layer.options;
+  console.log("oldStyle", oldStyle);
   layer.setStyle({
     weight: 3,
     color: '#666',
     dashArray: '',
     fillOpacity: 0.7,
   });
-  info.update(layer.feature);
+  console.log("highlightFeature", layer);
+  if (feature) {
+    info.update(feature.properties!);
+  }
   layer.bringToFront();
 };
 
-const zoomToFeature = (info: Info, map: L.Map) => (e: L.LeafletMouseEvent) => {
+const zoomToFeature = (info: Info, map: L.Map, feature: Feature<MultiPolygon>) => (e: L.LeafletMouseEvent) => {
   map.fitBounds(e.target.getBounds());
-  main(info.getPrefix(e.target.feature.properties.airports_gps_code));
+  // TODO, is there a better way?
+  console.log('click target', feature.properties);
+  main(info.getPrefix(feature.properties!.airports_gps_code));
 };
 
-const onEachFeature =
-  (map: L.Map, resetHighlight: any, info: Info) =>
-  (feature: any, layer: L.Layer) => {
-    layer.on({
-      mouseover: highlightFeature(info),
-      mouseout: resetHighlight,
-      click: zoomToFeature(info, map),
-    });
-  };
 
 export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
@@ -75,30 +80,29 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
     const color = geoData.color;
     console.log('geoData.color', color);
     const airportCircles = geoData.airports.map(a => toCircleMarker(a, color));
-    airportCircles.forEach(circle => {
-      circle.addTo(customMap.map);
-    });
+    // FIXME for now not added to customMap layers, so cannot be removed
+    // airportCircles.forEach(circle => {
+    //   circle.addTo(customMap.map);
+    // });
     if (geoData.feature !== undefined) {
       const multiPolygon = L.geoJson(geoData.feature, { style: style(arp) });
+      multiPolygon.on({
+        click: zoomToFeature(info, customMap.map, geoData.feature),
+      });
       layerElm.push(multiPolygon);
     }
-    layerElm.concat(airportCircles);
+    layerElm.push(...airportCircles);
+    console.log("layerElm", layerElm);
     const layer = L.featureGroup(layerElm);
     layer.on({
-      mouseover: highlightFeature(info),
+      mouseover: highlightFeature(info, geoData.feature),
       mouseout: resetHighlight(info),
-      click: zoomToFeature(info, customMap.map),
     });
     layer.addTo(customMap.map);
   }
   layers.forEach(layer => {
     layer.addTo(customMap.map);
   });
-  // geojson = L.geoJson(borders as any, {
-  //   style: style(arp),
-  //   onEachFeature: onEachFeature(customMap.map, resetHighlight, info),
-  // });
-  //customMap.addGeoJson(geojson);
 };
 
 const style = (arp: Airports) => (feature: any) => {

@@ -64,7 +64,7 @@ export class Info {
 
   update(feature?: any) {
     //console.log('update input', filter, feature);
-    const p = debug ? feature?.properties : feature?.geometry.properties;
+    const p = feature?.properties;
     this.div().innerHTML =
       '<h4>Airports information</h4>' +
       (p ? this.textProp(feature, p) : 'Hover over a country') +

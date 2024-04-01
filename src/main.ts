@@ -75,9 +75,9 @@ export class CustomMap {
     // });
   }
 
-  addGeoJson(geoJson: any) {
-    this.layers.push(geoJson);
-    geoJson.addTo(this.map);
+  addLayer(layer: L.Layer) {
+    this.layers.push(layer);
+    layer.addTo(this.map);
   }
 
   clear() {
