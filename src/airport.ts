@@ -1,6 +1,7 @@
 import { ALL } from './unparsed';
 import Papa from 'papaparse';
 import { colors } from './colors';
+import * as L from 'leaflet';
 
 export type Oaci = string;
 export type Iso2 = string;
@@ -26,6 +27,32 @@ export interface Airport {
   // wikipedia_link: string;
   // keywords: string;
 }
+
+export const toCircle = (
+  airport: Airport,
+  color: string,
+  fillOpacity: number = 0.6,
+): L.Circle => {
+  return L.circle([airport.latitude_deg, airport.longitude_deg], {
+    color: color,
+    fillColor: color,
+    fillOpacity: fillOpacity,
+    radius: 1000,
+  });
+};
+
+export const toCircleMarker = (
+  airport: Airport,
+  color: string,
+  fillOpacity: number = 0.6,
+): L.CircleMarker => {
+  return L.circleMarker([airport.latitude_deg, airport.longitude_deg], {
+    color: color,
+    fillColor: color,
+    fillOpacity: fillOpacity,
+    radius: 1,
+  });
+};
 
 const filtermap = <T, U>(arr: T[], f: (t: T) => U | undefined): U[] => {
   const res = [];
