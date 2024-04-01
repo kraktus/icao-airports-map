@@ -24,6 +24,10 @@ export function countBy<T, V>(x: T[], count: (t: T) => V): Map<V, number> {
   return res;
 }
 
+export function fold<T>(i: Iterable<T>, f: (a: T, b: T) => T): T {
+  return Array.from(i).reduce(f);
+}
+
 export function mergeCountBy<T, V>(
   y: Map<V, number>,
   z: Map<V, number>,

@@ -55,7 +55,7 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
 };
 
 const style = (arp: Airports) => (feature: any) => {
-  //console.log('feature', feature);
+  console.log('feature', feature);
   let fillColor = debug ? 'black' : feature.geometry.properties.color;
   let fillOpacity = 0.6;
   // console.log(

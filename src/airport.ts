@@ -2,7 +2,7 @@ import { ALL } from './unparsed';
 import Papa from 'papaparse';
 import { colors } from './colors';
 
-export type Ident = string;
+export type Oaci = string;
 export type Iso2 = string;
 
 // airport type
@@ -19,7 +19,7 @@ export interface Airport {
   // iso_region: string;
   // municipality: string;
   // scheduled_service: string;
-  gps_code: string;
+  gps_code: Oaci;
   // iata_code: string;
   // local_code: string;
   // home_link: string;
@@ -39,7 +39,7 @@ const filtermap = <T, U>(arr: T[], f: (t: T) => U | undefined): U[] => {
 };
 
 const toAirportMap = (airports: Airport[]) => {
-  const res = new Map<Ident, Airport>();
+  const res = new Map<Oaci, Airport>();
   for (const airport of airports) {
     res.set(airport.gps_code, airport);
   }
@@ -47,7 +47,7 @@ const toAirportMap = (airports: Airport[]) => {
 };
 
 const addToMap = (
-  acc: Map<string, Ident[]>,
+  acc: Map<string, Oaci[]>,
   airport: Airport,
   prefixLength: number,
 ) => {
@@ -61,8 +61,8 @@ const addToMap = (
 
 // for each airport code ABCD,
 // it will be included in A: ABCD, AB: ABCD, and ABC: ABCD
-const indexByPrefix = (airports: Airport[]): Map<string, Ident[]> => {
-  const res = new Map<string, Ident[]>();
+const indexByPrefix = (airports: Airport[]): Map<string, Oaci[]> => {
+  const res = new Map<string, Oaci[]>();
   for (const airport of airports) {
     for (const prefixLength of [1, 2, 3]) {
       addToMap(res, airport, prefixLength);
@@ -72,13 +72,13 @@ const indexByPrefix = (airports: Airport[]): Map<string, Ident[]> => {
 };
 
 export class Airports {
-  private map: Map<Ident, Airport>;
-  private byPrefix: Map<string, Ident[]>;
+  private map: Map<Oaci, Airport>;
+  private byPrefix: Map<string, Oaci[]>;
   constructor(airports: Airport[]) {
     this.map = toAirportMap(airports);
     this.byPrefix = indexByPrefix(airports);
   }
-  get(ident: Ident): Airport | undefined {
+  get(ident: Oaci): Airport | undefined {
     return this.map.get(ident);
   }
   iterator(): IterableIterator<Airport> {
@@ -87,13 +87,23 @@ export class Airports {
   all(): Airport[] {
     return Array.from(this.map.values());
   }
-  byIdent(ident: Ident): Airport {
+  private byIdentMaybe(ident: Oaci): Airport | undefined {
+    return this.get(ident);
+  }
+
+  private byIdent(ident: Oaci): Airport {
     const res = this.get(ident);
     if (res === undefined) {
       throw new Error(`no airport with ident ${ident}`);
     }
     return res;
   }
+  byIdents(idents: Oaci[]): Airport[] {
+    return idents
+      .map(ident => this.byIdentMaybe(ident))
+      .flatMap(item => (item ? [item] : [])); // no better way? where's Option
+  }
+
   getByPrefix(prefix: string): Airport[] {
     return this.byPrefix.get(prefix)!.map(ident => this.byIdent(ident));
   }
@@ -115,7 +125,7 @@ export class Airports {
   getAllPrefixes(length: number): Airport[][] {
     return filtermap(
       Array.from(this.byPrefix.entries()),
-      ([prefix, idents]: [string, Ident[]]) => {
+      ([prefix, idents]: [string, Oaci[]]) => {
         if (prefix.length === length) {
           return idents.map(ident => this.byIdent(ident));
         }
