@@ -363,6 +363,25 @@ def cross_check_easa() -> None:
     print("All easa airports in db")
 
 
+def airports_in_poly_mercator_vs_lat() -> None:
+    """Check if the airports in a polygon are the same when projecting or not with mercator"""
+    with open("country-borders-simplified-2.geo.json", "r") as f:
+        mercator_geojson = json.load(f)
+    with open("country-borders-simplified-2-wo-mercator.geo.json", "r") as f:
+        wo_mercator_geojson = json.load(f)
+    airports = get_airports()
+    # Polygons should be in the same order
+    for (feature, without_feature) in zip(mercator_geojson["features"], wo_mercator_geojson["features"]):
+        airports_mercator = set(feature["properties"]["airports_gps_code"])
+        without_airports = set(without_feature["properties"]["airports_gps_code"])
+        if airports_mercator != without_airports:
+            print("-"*3)
+            print(airports_mercator)
+            print(without_airports)
+
+
+
+
 def doc(dic: Dict[str, Callable[..., Any]]) -> str:
     """Produce documentation for every command based on doc of each function"""
     doc_string = ""
@@ -379,7 +398,8 @@ def main() -> None:
         "split_polygon": split_multipolygon,
         "airports_per_polygon": airports_per_polygon,
         "exp_cluster": cluster,
-        "exp_cross_check_easa": cross_check_easa
+        "exp_cross_check_easa": cross_check_easa,
+        "exp_mercator_vs_not": airports_in_poly_mercator_vs_lat,
     }
     parser.add_argument("command", choices=commands.keys(), help=doc(commands))
     args = parser.parse_args()
