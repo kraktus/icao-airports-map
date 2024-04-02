@@ -10,6 +10,7 @@ use anyhow::{Context, Result};
 use geo::{self, Contains, LineString};
 use geojson::{Feature, PolygonType, Value::Polygon};
 
+use std::f64::consts::PI;
 use std::collections::HashMap;
 
 #[derive(Debug, serde::Deserialize, Clone)]
@@ -21,24 +22,46 @@ struct Airport {
     //_iso_country: String,
 }
 
+
+// https://github.com/mapbox/supercluster/blob/fff7326c0232c3d488afee93c93c6b8eac5bcb46/index.js#L407-L424
+// to spherical mercator coords
+fn lng_to_x(lng: f64) -> f64 {
+    lng * PI / 180.0
+}
+
+fn lat_to_y(lat: f64) -> f64 {
+    let lat = lat * PI / 180.0;
+    0.5 * (1.0 - (0.5 * (lat.sin() + 1.0)).ln())
+}
+
+// fn lng_to_x(lng: f64) -> f64 {
+//     return lng / 360. + 0.5;
+// }
+// fn lat_to_y(lat: f64) -> f64 {
+//     let sin = (lat * PI / 180.).sin();
+//     let y = 0.5 - 0.25 * ((1f64 + sin) / (1f64 - sin)).ln() / PI;
+//     return y.min(0.).max(1.);
+// }
+
+// impl From<Airport> for geo::Point<f64> {
+//     fn from(arp: Airport) -> Self {
+//         Self::new(arp.longitude_deg, arp.latitude_deg)
+//     }
+// }
+
 fn country_borders(n: usize) -> String {
     format!("../country-borders-simplified-{n}.geo.json")
 }
 
-impl From<Airport> for geo::Point<f64> {
-    fn from(arp: Airport) -> Self {
-        Self::new(arp.longitude_deg, arp.latitude_deg)
-    }
-}
 
 impl Airport {
-    fn to_point(&self) -> geo::Point {
-        geo::Point::new(self.longitude_deg, self.latitude_deg)
+    fn to_point_mercator(&self) -> geo::Point<f64> {
+        geo::Point::new(lng_to_x(self.longitude_deg), lat_to_y(self.latitude_deg))
     }
 
-    fn is_in_polygon(&self, polygon: &PolygonType) -> bool {
-        let pt = self.to_point();
-        polygon_to_polygon(polygon).contains(&pt)
+    fn is_in_polygon_mercator(&self, polygon: &PolygonType) -> bool {
+        let pt = self.to_point_mercator();
+        polygon_to_polygon_mercator(polygon).contains(&pt)
     }
 }
 
@@ -73,19 +96,19 @@ fn write_geojson(updated_geojson: Vec<Feature>) -> Result<()> {
     Ok(())
 }
 
-fn vec_to_line(vec: &[Vec<f64>]) -> LineString<f64> {
+fn vec_to_line_mercator(vec: &[Vec<f64>]) -> LineString<f64> {
     vec.iter()
-        .map(|coord| (coord[0], coord[1]))
+        .map(|coord| (lng_to_x(coord[0]), lat_to_y(coord[1])))
         .collect::<Vec<_>>()
         .into()
 }
 
-fn polygon_to_polygon(polygon: &PolygonType) -> geo::Polygon {
+fn polygon_to_polygon_mercator(polygon: &PolygonType) -> geo::Polygon {
     let mut copy_vec = polygon.clone();
     let holes = copy_vec.split_off(1);
-    let line = vec_to_line(&copy_vec[0]);
+    let line = vec_to_line_mercator(&copy_vec[0]);
 
-    geo::Polygon::new(line, holes.iter().map(|x| vec_to_line(x)).collect())
+    geo::Polygon::new(line, holes.iter().map(|x| vec_to_line_mercator(x)).collect())
 }
 
 fn airports_in_polygon() -> Result<()> {
@@ -105,7 +128,7 @@ fn airports_in_polygon() -> Result<()> {
         // clone to avoid borrowing issue
         let arp_values: Vec<Airport> = airports.values().cloned().collect();
         for airport in arp_values {
-            if airport.is_in_polygon(polygon) {
+            if airport.is_in_polygon_mercator(polygon) {
                 arp_in.push(airport.gps_code.clone());
                 airports.remove(&airport.gps_code);
             }
