@@ -2,6 +2,7 @@ import * as L from 'leaflet';
 import { countBy, getMostCommon, groupBy } from './utils';
 import { debug } from './config';
 import { Oaci } from './airport';
+import { Feature, MultiPolygon } from 'geojson';
 
 const toBr = (...l: string[]) => {
   // place each element into <b> /<b><br /> tag
@@ -62,12 +63,12 @@ export class Info {
     this.filter = filter;
   }
 
-  update(feature?: any) {
+  update(feature?: Feature<MultiPolygon>) {
     //console.log('update input', filter, feature);
     const p = feature?.properties;
     this.div().innerHTML =
-      '<h4>Airports information</h4>' +
-      (p ? this.textProp(feature, p) : 'Hover over a country') +
+      '<h4>ICAO Airport codes</h4>' +
+      (p ? this.textProp(feature, p) : 'Hover over an area') +
       '</br>' +
       this.inputInfo();
   }

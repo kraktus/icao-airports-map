@@ -27,6 +27,10 @@ const defaultStyle = {
 
 // Global grr, but hard to do better
 let currentlyHighlighted: L.Layer | undefined = undefined;
+// interface OldStyle {
+//   multiPolygon: Object;
+//   circle: Object; // for now assume all circles have same style
+// }
 let oldStyle: any = undefined; // WIP
 
 const resetHighlight = (info: Info) => (e: L.LeafletMouseEvent) => {
@@ -43,18 +47,10 @@ const highlightFeature =
   (info: Info, feature?: Feature<MultiPolygon>) => (e: L.LeafletMouseEvent) => {
     let layer = e.target;
     currentlyHighlighted = layer;
-    oldStyle = layer.options;
-    console.log('oldStyle', oldStyle);
-    layer.setStyle({
-      weight: 3,
-      color: '#666',
-      dashArray: '',
-      fillOpacity: 0.7,
-    });
-    console.log('highlightFeature', layer);
-    if (feature) {
-      info.update(feature.properties!);
-    }
+    oldStyle = [];
+    layer.eachLayer((l: any) => oldStyle.push(l.options));
+    layer.setStyle(highLightStyle);
+    info.update(feature);
     layer.bringToFront();
   };
 

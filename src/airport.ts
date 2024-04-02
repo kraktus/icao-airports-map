@@ -40,7 +40,6 @@ export const toCircle = (
     radius: 1000,
   });
   circle.bindPopup(`${airport.name}: ${airport.gps_code}`);
-  console.log('toCircle', circle.options);
   return circle;
 };
 
