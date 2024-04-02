@@ -350,6 +350,18 @@ def cluster() -> None:
         print("cluster repartition", cluster_count)
         # display outliers gps_code, and name
 
+def cross_check_easa() -> None:
+    """Verify that eash EASA airport is in the CSV"""
+    airports = get_airports()
+    # https://www.easa.europa.eu/en/datasets/aerodromes-falling-scope-regulation-eu-20181139
+    with open("easa-airport-list.json", "r") as f:
+        easa_airports = json.load(f)
+    for easa_arp in easa_airports["data"]:
+        icao = "ICAO airport code"
+        if easa_arp[icao] not in airports:
+            print(f"{easa_arp[icao]} not in airports")
+    print("All easa airports in db")
+
 
 def doc(dic: Dict[str, Callable[..., Any]]) -> str:
     """Produce documentation for every command based on doc of each function"""
@@ -367,6 +379,7 @@ def main() -> None:
         "split_polygon": split_multipolygon,
         "airports_per_polygon": airports_per_polygon,
         "exp_cluster": cluster,
+        "exp_cross_check_easa": cross_check_easa
     }
     parser.add_argument("command", choices=commands.keys(), help=doc(commands))
     args = parser.parse_args()
