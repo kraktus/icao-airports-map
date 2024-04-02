@@ -8,7 +8,7 @@
     "typecheck": "tsc --watch",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "format": "prettier --write --log-level warn .",
+    "format": "prettier --write --ignore-unknown --log-level warn .",
     "watch-format": "onchange \"**/*\" -- prettier --write --log-level warn --ignore-unknown {{changed}}"
   },
   "devDependencies": {

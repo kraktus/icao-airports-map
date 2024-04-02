@@ -33,12 +33,15 @@ export const toCircle = (
   color: string,
   fillOpacity: number = 0.6,
 ): L.Circle => {
-  return L.circle([airport.latitude_deg, airport.longitude_deg], {
+  const circle = L.circle([airport.latitude_deg, airport.longitude_deg], {
     color: color,
     fillColor: color,
     fillOpacity: fillOpacity,
     radius: 1000,
   });
+  circle.bindPopup(`${airport.name}: ${airport.gps_code}`);
+  console.log('toCircle', circle.options);
+  return circle;
 };
 
 export const toCircleMarker = (
