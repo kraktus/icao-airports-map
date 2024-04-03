@@ -250,6 +250,7 @@ def del_outliers(airports: Dict[str, Airport], outliers: List[str]) -> None:
 
 
 def dl_airports() -> None:
+    """download airports csv from ouraiports.com"""
     req = Req()
     # from https://ourairports.com/data/
     airport_str = req.http.get(

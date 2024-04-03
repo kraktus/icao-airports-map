@@ -54,26 +54,13 @@ export class Borders {
       polyByPrefix,
       mergeBorders,
     );
-    // why doesn't flaMap on iterator work?
-    const minorityAirports = Array.from(mergedBorders.values()).flatMap(
-      border => border.minorityAirports(),
-    );
-    const minorityAirportsByPrefix =
-      this.info.groupByPrefixes(minorityAirports);
     const geoDataMap = new Map<string, GeoData>();
+    // TODO/FIXME, this currently ignore prefix for which there are no polygons
     for (const prefix of this.arp.listPrefix(this.info.prefixLength())) {
       const border = mergedBorders.get(prefix);
-      let feature;
       if (border) {
-        feature = border.toMultiPolygon(this.info, this.arp);
+        geoDataMap.set(prefix, border.toGeoData(this.info, this.arp));
       }
-      const minority = minorityAirportsByPrefix.get(prefix) || [];
-      const color = this.arp.prefixColor(prefix, this.info.prefixLength());
-      geoDataMap.set(prefix, {
-        feature,
-        airports: this.arp.byIdents(minority),
-        color,
-      });
     }
     return geoDataMap;
   }
@@ -150,7 +137,20 @@ class Border {
     };
   }
 
-  toMultiPolygon(info: Info, arp: Airports): Feature<MultiPolygon> | undefined {
+  toGeoData(info: Info, arp: Airports): GeoData {
+    let multiPolygon = this.toMultiPolygon(info, arp);
+    let airports = multiPolygon ? this.minorityAirports() : this.airports();
+    return {
+      feature: multiPolygon,
+      airports: arp.byIdents(airports),
+      color: arp.prefixColor(this.prefix(), info.prefixLength()),
+    };
+  }
+
+  private toMultiPolygon(
+    info: Info,
+    arp: Airports,
+  ): Feature<MultiPolygon> | undefined {
     if (this.shouldShowPolygon()) {
       const coords = this.features.map(f => f.geometry.coordinates);
       return writeMultiPolygon(coords, this.properties(info, arp));
@@ -196,11 +196,13 @@ const writeMultiPolygon = (
   };
 };
 
-// for the same prefix
+// for the same Border
 export interface GeoData {
   // feature is always multipolygon in this case
   feature?: Feature<MultiPolygon>; // TODO add geojson package or typing
-  // airports that are outside the multipolygon, and are minority in other multipolygons
+  // minority airports in the multipolygon,
+  // or in case the polygon is not shown, all airports
   airports: Airport[];
-  color: string; // for easier access
+  color: string; // for easier access, TODO not useful anymore I think, since airports
+  // are colored individually, and the mPoly has its color stored
 }
