@@ -63,14 +63,6 @@ const zoomToFeature =
     main(info.getPrefix(feature.properties!.airports_gps_code));
   };
 
-// const colorOfAirport =
-//   (arp: Airports, info: Info) =>
-//   (airport: Airport): string =>
-//     arp.prefixColor(
-//       info.getGpsCodePrefix(airport.gps_code),
-//       info.prefixLength(),
-//     );
-
 export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
   const geoDataMap = new Borders(info, arp).makeGeojson();
