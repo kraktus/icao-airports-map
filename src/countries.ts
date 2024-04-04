@@ -8,8 +8,6 @@ import { debug } from './config';
 import * as Countries from '../country-borders-simplified-2.geo.json';
 import { Feature, MultiPolygon } from 'geojson';
 
-const fillOpacity = 0.6;
-
 const highLightStyle = {
   weight: 3,
   color: '#666',
@@ -17,31 +15,16 @@ const highLightStyle = {
   fillOpacity: 0.7,
 };
 
-const defaultStyle = {
-  weight: 2,
-  opacity: 1,
-  color: undefined,
-  dashArray: '3',
-  fillOpacity: fillOpacity,
-};
-
-// Global grr, but hard to do better
-let currentlyHighlighted: OriginalStyle | undefined = undefined;
-
-const resetHighlight = (info: Info) => (e: L.LeafletMouseEvent) => {
-  if (currentlyHighlighted !== undefined) {
+const resetHighlight =
+  (info: Info, originalStyle: OriginalStyle) => (e: L.LeafletMouseEvent) => {
     info.update();
-    currentlyHighlighted.resetStyle();
-  } else {
-    console.log('currentlyHighlighted is undefined');
-  }
-};
+    originalStyle.resetStyle();
+    e.target.bringToBack();
+  };
 
 const highlightFeature =
-  (info: Info, originalStyle: OriginalStyle, feature?: Feature<MultiPolygon>) =>
-  (e: L.LeafletMouseEvent) => {
+  (info: Info, feature?: Feature<MultiPolygon>) => (e: L.LeafletMouseEvent) => {
     let layer = e.target;
-    currentlyHighlighted = originalStyle;
     layer.setStyle(highLightStyle);
     info.update(feature);
     layer.bringToFront();
@@ -52,7 +35,6 @@ const zoomToFeature =
   (e: L.LeafletMouseEvent) => {
     map.fitBounds(e.target.getBounds());
     // TODO, is there a better way?
-    console.log('click target', feature.properties);
     main(info.getPrefix(feature.properties!.airports_gps_code));
   };
 
@@ -77,8 +59,8 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
     console.log('layerElm', layerElm);
     const layer = L.featureGroup(layerElm);
     layer.on({
-      mouseover: highlightFeature(info, originalStyle, geoData.feature),
-      mouseout: resetHighlight(info),
+      mouseover: highlightFeature(info, geoData.feature),
+      mouseout: resetHighlight(info, originalStyle),
     });
     customMap.addLayer(layer);
   }
@@ -89,21 +71,13 @@ const style =
   (feature?: Feature): L.PathOptions => {
     console.log('feature', feature);
     let fillColor = debug ? 'black' : feature?.properties!.color;
-    // console.log(
-    //   'most common prefix of country',
-    //   feature.properties.ISO_A2_EH,
-    //   mostCommon,
-    //   fillColor,
-    // );
-
-    // only `fillOpacity` is different compared to `defaultStyle`
     return {
       fillColor: fillColor,
       weight: 2,
       opacity: 1,
       color: undefined,
       dashArray: '3',
-      fillOpacity: fillOpacity,
+      fillOpacity: 0.6,
     };
   };
 
