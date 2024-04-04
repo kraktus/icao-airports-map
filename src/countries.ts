@@ -63,25 +63,23 @@ const zoomToFeature =
     main(info.getPrefix(feature.properties!.airports_gps_code));
   };
 
-const colorOfAirport =
-  (arp: Airports, info: Info) =>
-  (airport: Airport): string =>
-    arp.prefixColor(
-      info.getGpsCodePrefix(airport.gps_code),
-      info.prefixLength(),
-    );
+// const colorOfAirport =
+//   (arp: Airports, info: Info) =>
+//   (airport: Airport): string =>
+//     arp.prefixColor(
+//       info.getGpsCodePrefix(airport.gps_code),
+//       info.prefixLength(),
+//     );
 
 export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
-  const colorOf = colorOfAirport(arp, info);
-  const layers: L.Layer[] = [];
   const geoDataMap = new Borders(info, arp).makeGeojson();
   for (const [prefix, geoData] of geoDataMap) {
     const layerElm: any[] = [];
     console.log('geoData.feature', geoData.feature);
     const color = geoData.color;
     console.log('geoData.color', color);
-    const airportCircles = geoData.airports.map(a => toCircle(a, colorOf(a)));
+    const airportCircles = geoData.airports.map(a => toCircle(a, color));
     if (geoData.feature !== undefined) {
       const multiPolygon = L.geoJson(geoData.feature, { style: style(arp) });
       multiPolygon.on({
@@ -98,9 +96,6 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
     });
     customMap.addLayer(layer);
   }
-  layers.forEach(layer => {
-    layer.addTo(customMap.map);
-  });
 };
 
 const style = (arp: Airports) => (feature?: Feature) => {

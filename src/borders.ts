@@ -5,6 +5,7 @@ import {
   getMostCommon,
   mergeCountBy,
   fold,
+  groupByOne,
   mapValues,
   setOf,
 } from './utils';
@@ -54,13 +55,32 @@ export class Borders {
       polyByPrefix,
       mergeBorders,
     );
-    const geoDataMap = new Map<string, GeoData>();
-    // TODO/FIXME, this currently ignore prefix for which there are no polygons
-    for (const prefix of this.arp.listPrefix(this.info.prefixLength())) {
-      const border = mergedBorders.get(prefix);
-      if (border) {
-        geoDataMap.set(prefix, border.toGeoData(this.info, this.arp));
+
+    const individualAiports: Oaci[] = [];
+    const polys: Feature<MultiPolygon>[] = [];
+    for (const border of mergedBorders.values()) {
+      const [airports, poly] = border.airportsAndPoly(this.info, this.arp);
+      individualAiports.push(...airports);
+      if (poly) {
+        polys.push(poly);
       }
+    }
+    const individualAiportsByPrefix =
+      this.info.groupByPrefixes(individualAiports);
+    const polysByPrefix = groupByOne(
+      polys,
+      (poly: Feature<MultiPolygon>) => poly.properties!.prefix,
+    );
+
+    const geoDataMap = new Map<string, GeoData>();
+    for (const prefix of this.arp.listPrefix(this.info.prefixLength())) {
+      const poly = polysByPrefix.get(prefix);
+      const airports = individualAiportsByPrefix.get(prefix) || [];
+      geoDataMap.set(prefix, {
+        feature: poly,
+        airports: this.arp.byIdents(airports),
+        color: this.arp.prefixColor(prefix, this.info.prefixLength()),
+      });
     }
     return geoDataMap;
   }
@@ -134,17 +154,17 @@ class Border {
     return {
       airports_gps_code: this.airports(),
       color: arp.prefixColor(this.prefix(), info.prefixLength()),
+      prefix: this.prefix(),
     };
   }
-
-  toGeoData(info: Info, arp: Airports): GeoData {
+  // return airports that should be shown indivially, and the multipolygon, if possible
+  airportsAndPoly(
+    info: Info,
+    arp: Airports,
+  ): [Oaci[], Feature<MultiPolygon> | undefined] {
     let multiPolygon = this.toMultiPolygon(info, arp);
     let airports = multiPolygon ? this.minorityAirports() : this.airports();
-    return {
-      feature: multiPolygon,
-      airports: arp.byIdents(airports),
-      color: arp.prefixColor(this.prefix(), info.prefixLength()),
-    };
+    return [airports, multiPolygon];
   }
 
   private toMultiPolygon(
@@ -196,13 +216,11 @@ const writeMultiPolygon = (
   };
 };
 
-// for the same Border
+// for the same `prefix`!
 export interface GeoData {
-  // feature is always multipolygon in this case
-  feature?: Feature<MultiPolygon>; // TODO add geojson package or typing
-  // minority airports in the multipolygon,
+  feature?: Feature<MultiPolygon>;
+  // minority airports other multipolygons,
   // or in case the polygon is not shown, all airports
   airports: Airport[];
-  color: string; // for easier access, TODO not useful anymore I think, since airports
-  // are colored individually, and the mPoly has its color stored
+  color: string;
 }

@@ -11,6 +11,18 @@ export function groupBy<T, V>(x: T[], key: (t: T) => V): Map<V, T[]> {
   return res;
 }
 
+export function groupByOne<T, V>(x: T[], key: (t: T) => V): Map<V, T> {
+  const res = new Map<V, T>();
+  for (const t of x) {
+    const k = key(t);
+    if (res.has(k)) {
+      throw new Error('groupByOne: key is not unique');
+    }
+    res.set(k, t);
+  }
+  return res;
+}
+
 export function mergeGroupBy<T, V>(
   y: Map<V, T[]>,
   z: Map<V, T[]>,
