@@ -89,6 +89,10 @@ export function mergeCountBy<T, V>(
   return x;
 }
 
+export function deepCopy<T>(x: T): T {
+  return JSON.parse(JSON.stringify(x));
+}
+
 export function getMostCommon<V>(x: Map<V, number>): V | undefined {
   if (x.size === 0) {
     return undefined;

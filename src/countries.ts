@@ -1,6 +1,6 @@
 import * as L from 'leaflet';
 import { Airports, Iso2, Airport, toCircle, toCircleMarker } from './airport';
-import { countBy, getMostCommon } from './utils';
+import { countBy, getMostCommon, deepCopy } from './utils';
 import { Borders, GeoData } from './borders';
 import { Info } from './info';
 import { CustomMap, main } from './main';
@@ -26,29 +26,22 @@ const defaultStyle = {
 };
 
 // Global grr, but hard to do better
-let currentlyHighlighted: L.Layer | undefined = undefined;
-// interface OldStyle {
-//   multiPolygon: Object;
-//   circle: Object; // for now assume all circles have same style
-// }
-let oldStyle: any = undefined; // WIP
+let currentlyHighlighted: OriginalStyle | undefined = undefined;
 
 const resetHighlight = (info: Info) => (e: L.LeafletMouseEvent) => {
   if (currentlyHighlighted !== undefined) {
     info.update();
-    // @ts-ignore
-    currentlyHighlighted.setStyle(defaultStyle);
+    currentlyHighlighted.resetStyle();
   } else {
     console.log('currentlyHighlighted is undefined');
   }
 };
 
 const highlightFeature =
-  (info: Info, feature?: Feature<MultiPolygon>) => (e: L.LeafletMouseEvent) => {
+  (info: Info, originalStyle: OriginalStyle, feature?: Feature<MultiPolygon>) =>
+  (e: L.LeafletMouseEvent) => {
     let layer = e.target;
-    currentlyHighlighted = layer;
-    oldStyle = [];
-    layer.eachLayer((l: any) => oldStyle.push(l.options));
+    currentlyHighlighted = originalStyle;
     layer.setStyle(highLightStyle);
     info.update(feature);
     layer.bringToFront();
@@ -67,46 +60,72 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
   const geoDataMap = new Borders(info, arp).makeGeojson();
   for (const [prefix, geoData] of geoDataMap) {
-    const layerElm: any[] = [];
-    console.log('geoData.feature', geoData.feature);
+    const layerElm: (L.Path | L.GeoJSON)[] = [];
+    const originalStyle = new OriginalStyle();
     const color = geoData.color;
-    console.log('geoData.color', color);
     const airportCircles = geoData.airports.map(a => toCircle(a, color));
+    airportCircles.forEach(c => originalStyle.addPath(c));
     if (geoData.feature !== undefined) {
       const multiPolygon = L.geoJson(geoData.feature, { style: style(arp) });
       multiPolygon.on({
         click: zoomToFeature(info, customMap.map, geoData.feature),
       });
       layerElm.push(multiPolygon);
+      originalStyle.addGeoJson(multiPolygon, style(arp)(geoData.feature));
     }
     layerElm.push(...airportCircles);
     console.log('layerElm', layerElm);
     const layer = L.featureGroup(layerElm);
     layer.on({
-      mouseover: highlightFeature(info, geoData.feature),
+      mouseover: highlightFeature(info, originalStyle, geoData.feature),
       mouseout: resetHighlight(info),
     });
     customMap.addLayer(layer);
   }
 };
 
-const style = (arp: Airports) => (feature?: Feature) => {
-  console.log('feature', feature);
-  let fillColor = debug ? 'black' : feature?.properties!.color;
-  // console.log(
-  //   'most common prefix of country',
-  //   feature.properties.ISO_A2_EH,
-  //   mostCommon,
-  //   fillColor,
-  // );
+const style =
+  (arp: Airports) =>
+  (feature?: Feature): L.PathOptions => {
+    console.log('feature', feature);
+    let fillColor = debug ? 'black' : feature?.properties!.color;
+    // console.log(
+    //   'most common prefix of country',
+    //   feature.properties.ISO_A2_EH,
+    //   mostCommon,
+    //   fillColor,
+    // );
 
-  // only `fillOpacity` is different compared to `defaultStyle
-  return {
-    fillColor: fillColor,
-    weight: 2,
-    opacity: 1,
-    color: undefined,
-    dashArray: '3',
-    fillOpacity: fillOpacity,
+    // only `fillOpacity` is different compared to `defaultStyle`
+    return {
+      fillColor: fillColor,
+      weight: 2,
+      opacity: 1,
+      color: undefined,
+      dashArray: '3',
+      fillOpacity: fillOpacity,
+    };
   };
-};
+
+class OriginalStyle {
+  private elm: [L.Path | L.GeoJSON, L.PathOptions][];
+  constructor() {
+    this.elm = [];
+  }
+  addPath(layer: L.Path) {
+    // deepCopy is conservative here
+    this.elm.push([layer, deepCopy(layer.options)]);
+  }
+
+  addGeoJson(geojson: L.GeoJSON, styleOptions: L.PathOptions) {
+    // deepCopy is conservative here
+    this.elm.push([geojson, styleOptions]);
+  }
+
+  resetStyle() {
+    for (const [layer, style] of this.elm) {
+      console.log('resetStyle, layer', layer, 'style', style);
+      layer.setStyle(style);
+    }
+  }
+}
