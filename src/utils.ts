@@ -90,7 +90,7 @@ export function mergeCountBy<T, V>(
 }
 
 export function deepCopy<T>(x: T): T {
-  return JSON.parse(JSON.stringify(x));
+  return structuredClone(x);
 }
 
 export function getMostCommon<V>(x: Map<V, number>): V | undefined {

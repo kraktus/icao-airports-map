@@ -1,4 +1,4 @@
-import * as L from 'leaflet';
+import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
 import { countBy, getMostCommon, groupBy } from './utils';
 import { debug } from './config';
 import { Oaci } from './airport';

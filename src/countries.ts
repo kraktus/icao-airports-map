@@ -1,4 +1,4 @@
-import * as L from 'leaflet';
+import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
 import { Airports, Iso2, Airport, toCircle, toCircleMarker } from './airport';
 import { countBy, getMostCommon, deepCopy } from './utils';
 import { Borders, GeoData } from './borders';
@@ -16,16 +16,17 @@ const highLightStyle = {
 };
 
 const resetHighlight =
-  (info: Info, originalStyle: OriginalStyle) => (e: L.LeafletMouseEvent) => {
+  (info: Info, styling: Styling) => (e: L.LeafletMouseEvent) => {
     info.update();
-    originalStyle.resetStyle();
+    styling.resetStyle();
     e.target.bringToBack();
   };
 
 const highlightFeature =
-  (info: Info, feature?: Feature<MultiPolygon>) => (e: L.LeafletMouseEvent) => {
+  (info: Info, styling: Styling, feature?: Feature<MultiPolygon>) =>
+  (e: L.LeafletMouseEvent) => {
     let layer = e.target;
-    layer.setStyle(highLightStyle);
+    styling.highlightStyle();
     info.update(feature);
     layer.bringToFront();
   };
@@ -43,33 +44,33 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   const geoDataMap = new Borders(info, arp).makeGeojson();
   for (const [prefix, geoData] of geoDataMap) {
     const layerElm: (L.Path | L.GeoJSON)[] = [];
-    const originalStyle = new OriginalStyle();
+    const styling = new Styling();
     const color = geoData.color;
-    const airportCircles = geoData.airports.map(a => toCircle(a, color));
-    airportCircles.forEach(c => originalStyle.addPath(c));
+    const airportCircles = geoData.airports.map(a => toCircleMarker(a, color));
+    airportCircles.forEach(c => styling.addPath(c));
     if (geoData.feature !== undefined) {
-      const multiPolygon = L.geoJson(geoData.feature, { style: style(arp) });
+      const multiPolygon = L.geoJson(geoData.feature, {
+        style: styleCallback(arp),
+      });
       multiPolygon.on({
         click: zoomToFeature(info, customMap.map, geoData.feature),
       });
       layerElm.push(multiPolygon);
-      originalStyle.addGeoJson(multiPolygon, style(arp)(geoData.feature));
+      styling.addGeoJson(multiPolygon, styleCallback(arp)(geoData.feature));
     }
     layerElm.push(...airportCircles);
-    console.log('layerElm', layerElm);
     const layer = L.featureGroup(layerElm);
     layer.on({
-      mouseover: highlightFeature(info, geoData.feature),
-      mouseout: resetHighlight(info, originalStyle),
+      mouseover: highlightFeature(info, styling, geoData.feature),
+      mouseout: resetHighlight(info, styling),
     });
     customMap.addLayer(layer);
   }
 };
 
-const style =
+const styleCallback =
   (arp: Airports) =>
   (feature?: Feature): L.PathOptions => {
-    console.log('feature', feature);
     let fillColor = debug ? 'black' : feature?.properties!.color;
     return {
       fillColor: fillColor,
@@ -81,25 +82,42 @@ const style =
     };
   };
 
-class OriginalStyle {
-  private elm: [L.Path | L.GeoJSON, L.PathOptions][];
+class Styling {
+  private paths: [L.CircleMarker, L.CircleMarkerOptions][];
+  private geoJsons: [L.GeoJSON, L.PathOptions][];
   constructor() {
-    this.elm = [];
+    this.paths = [];
+    this.geoJsons = [];
   }
-  addPath(layer: L.Path) {
+  addPath(layer: L.CircleMarker) {
     // deepCopy is conservative here
-    this.elm.push([layer, deepCopy(layer.options)]);
+    this.paths.push([layer, deepCopy(layer.options)]);
   }
 
   addGeoJson(geojson: L.GeoJSON, styleOptions: L.PathOptions) {
     // deepCopy is conservative here
-    this.elm.push([geojson, styleOptions]);
+    console.log('styleOptions', styleOptions);
+    this.geoJsons.push([geojson, deepCopy(styleOptions)]);
+  }
+
+  highlightStyle() {
+    for (const [layer, options] of this.paths) {
+      layer.setRadius(options.radius! * 5);
+      layer.setStyle(highLightStyle);
+    }
+    for (const [layer, style] of this.geoJsons) {
+      layer.setStyle(highLightStyle);
+    }
   }
 
   resetStyle() {
-    for (const [layer, style] of this.elm) {
-      console.log('resetStyle, layer', layer, 'style', style);
+    for (const [layer, options] of this.paths) {
+      layer.setStyle(options);
+      layer.setRadius(options.radius!);
+    }
+    for (const [layer, style] of this.geoJsons) {
       layer.setStyle(style);
+      console.log('style following', style);
     }
   }
 }

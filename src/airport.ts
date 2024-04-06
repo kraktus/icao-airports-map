@@ -1,7 +1,7 @@
 import { ALL } from './unparsed';
 import Papa from 'papaparse';
 import { colors } from './colors';
-import * as L from 'leaflet';
+import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
 
 export type Oaci = string;
 export type Iso2 = string;
@@ -48,12 +48,17 @@ export const toCircleMarker = (
   color: string,
   fillOpacity: number = 0.6,
 ): L.CircleMarker => {
-  return L.circleMarker([airport.latitude_deg, airport.longitude_deg], {
-    color: color,
-    fillColor: color,
-    fillOpacity: fillOpacity,
-    radius: 2,
-  });
+  const circleMarker = L.circleMarker(
+    [airport.latitude_deg, airport.longitude_deg],
+    {
+      color: color,
+      fillColor: color,
+      fillOpacity: fillOpacity,
+      radius: 2,
+    },
+  );
+  circleMarker.bindPopup(`${airport.name}: ${airport.gps_code}`);
+  return circleMarker;
 };
 
 const filtermap = <T, U>(arr: T[], f: (t: T) => U | undefined): U[] => {
