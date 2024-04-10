@@ -5,7 +5,6 @@ import { Borders, GeoData } from './borders';
 import { Info } from './info';
 import { CustomMap, main } from './main';
 import { debug } from './config';
-import * as Countries from '../country-borders-simplified-2.geo.json';
 import { Feature, MultiPolygon } from 'geojson';
 
 const highLightStyle = {
