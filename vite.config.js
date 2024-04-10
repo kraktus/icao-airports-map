@@ -1,4 +1,4 @@
 // vite.config.js
 export default {
-  base: '/icao-airport/',
+  base: '/icao-airports-map/',
 };
