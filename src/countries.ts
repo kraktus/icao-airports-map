@@ -1,11 +1,10 @@
 import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
 import { Airports, toCircleMarker } from './airport';
 import { deepCopy } from './utils';
-import { Borders } from './borders';
-import { Info } from './info';
+import { Borders, toUpdateData, GeoData } from './borders';
+import { Info, UpdateData } from './info';
 import { CustomMap, main } from './main';
-import { debug } from './config';
-import { Feature, MultiPolygon } from 'geojson';
+import { Feature } from 'geojson';
 
 const highLightStyle = {
   weight: 3,
@@ -22,55 +21,65 @@ const resetHighlight =
   };
 
 const highlightFeature =
-  (info: Info, styling: Styling, feature?: Feature<MultiPolygon>) =>
+  (info: Info, styling: Styling, updateData?: UpdateData) =>
   (e: L.LeafletMouseEvent) => {
     let layer = e.target;
     styling.highlightStyle();
-    info.update(feature);
+    info.update(updateData);
     layer.bringToFront();
   };
 
 const zoomToFeature =
-  (info: Info, map: L.Map, feature: Feature<MultiPolygon>) =>
-  (e: L.LeafletMouseEvent) => {
+  (map: L.Map, prefix: string) => (e: L.LeafletMouseEvent) => {
     map.fitBounds(e.target.getBounds());
     // TODO, is there a better way?
-    main(info.getPrefix(feature.properties!.airports_gps_code));
+    main(prefix);
   };
 
 export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
-  //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
   const geoDataMap = new Borders(info, arp).makeGeojson();
-  for (const geoData of geoDataMap.values()) {
-    const layerElm: (L.Path | L.GeoJSON)[] = [];
-    const styling = new Styling();
-    const color = geoData.color;
-    const airportCircles = geoData.airports.map(a => toCircleMarker(a, color));
-    airportCircles.forEach(c => styling.addPath(c));
-    if (geoData.feature !== undefined) {
-      const multiPolygon = L.geoJson(geoData.feature, {
-        style: styleCallback,
-      });
-      multiPolygon.on({
-        click: zoomToFeature(info, customMap.map, geoData.feature),
-      });
-      layerElm.push(multiPolygon);
-      styling.addGeoJson(multiPolygon, styleCallback(geoData.feature));
-    }
-    layerElm.push(...airportCircles);
-    const layer = L.featureGroup(layerElm);
-    layer.on({
-      mouseover: highlightFeature(info, styling, geoData.feature),
-      mouseout: resetHighlight(info, styling),
-    });
-    customMap.addLayer(layer);
+  for (const [prefix, geoData] of geoDataMap) {
+    addGeoData(customMap, info, prefix, geoData);
   }
 };
 
+const addGeoData = (
+  customMap: CustomMap,
+  info: Info,
+  prefix: string,
+  geoData: GeoData,
+) => {
+  const maxedZoomPrefix = prefix.length == 3;
+  const layerElm: (L.Path | L.GeoJSON)[] = [];
+  const styling = new Styling();
+  const airportCircles = geoData.airports.map(a =>
+    toCircleMarker(a, geoData.color, maxedZoomPrefix),
+  );
+  airportCircles.forEach(styling.addPath.bind(styling));
+  if (geoData.feature !== undefined) {
+    const multiPolygon = L.geoJson(geoData.feature, {
+      style: styleCallback,
+    });
+    layerElm.push(multiPolygon);
+    styling.addGeoJson(multiPolygon, styleCallback(geoData.feature));
+  }
+  layerElm.push(...airportCircles);
+  const layer = L.featureGroup(layerElm);
+  layer.on({
+    mouseover: highlightFeature(info, styling, toUpdateData(prefix, geoData)),
+    mouseout: resetHighlight(info, styling),
+  });
+  if (!maxedZoomPrefix) {
+    layer.on({
+      click: zoomToFeature(customMap.map, prefix),
+    });
+  }
+  customMap.addLayer(layer);
+};
+
 const styleCallback = (feature?: Feature): L.PathOptions => {
-  let fillColor = debug ? 'black' : feature?.properties!.color;
   return {
-    fillColor: fillColor,
+    fillColor: feature?.properties!.color,
     weight: 2,
     opacity: 1,
     color: undefined,
@@ -93,7 +102,6 @@ class Styling {
 
   addGeoJson(geojson: L.GeoJSON, styleOptions: L.PathOptions) {
     // deepCopy is conservative here
-    console.log('styleOptions', styleOptions);
     this.geoJsons.push([geojson, deepCopy(styleOptions)]);
   }
 

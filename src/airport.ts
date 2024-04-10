@@ -47,6 +47,7 @@ export const toCircle = (
 export const toCircleMarker = (
   airport: Airport,
   color: string,
+  popup: boolean = false,
   fillOpacity: number = 0.6,
 ): L.CircleMarker => {
   const circleMarker = L.circleMarker(
@@ -58,7 +59,9 @@ export const toCircleMarker = (
       radius: 2,
     },
   );
-  circleMarker.bindPopup(`${airport.name}: ${airport.gps_code}`);
+  if (popup) {
+    circleMarker.bindPopup(`${airport.name}: ${airport.gps_code}`);
+  }
   return circleMarker;
 };
 

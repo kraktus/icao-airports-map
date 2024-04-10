@@ -1,8 +1,6 @@
 import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
 import { countBy, getMostCommon, groupBy } from './utils';
-import { debug } from './config';
 import { Oaci } from './airport';
-import { Feature, MultiPolygon } from 'geojson';
 
 const toBr = (...l: string[]) => {
   // place each element into <b> /<b><br /> tag
@@ -10,14 +8,7 @@ const toBr = (...l: string[]) => {
 };
 
 const text = (...l: (string | undefined)[]) => {
-  return debug
-    ? toBr(
-        `id ${l[0]}`,
-        `${l[1]} airports`,
-        `ICAO prefix: <b>${l[2]}</b>`,
-        `country code: ${l[3]}`,
-      )
-    : toBr(`${l[0]} airports`, `ICAO prefix:  <b>${l[1]}</b>`);
+  return toBr(`${l[0]} airports`, `ICAO prefix:  <b>${l[1]}</b>`);
 };
 
 export class Info {
@@ -63,12 +54,10 @@ export class Info {
     this.filter = filter;
   }
 
-  update(feature?: Feature<MultiPolygon>) {
-    //console.log('update input', filter, feature);
-    const p = feature?.properties;
+  update(data?: UpdateData) {
     this.div().innerHTML =
       '<h4>ICAO Airport codes</h4>' +
-      (p ? this.textProp(feature, p) : 'Hover over an area') +
+      (data ? this.textProp(data) : 'Hover over an area') +
       '</br>' +
       this.inputInfo();
   }
@@ -78,19 +67,17 @@ export class Info {
     return `<div class="info-input">filter: <input type="text" id="info-input" value="${this.filter}"/><button id="info-button">Go</button></div>`;
   }
 
-  private textProp(feature: any, p: any) {
-    return debug
-      ? text(
-          feature.id,
-          p.airports_gps_code.length,
-          this.getPrefix(p.airports_gps_code),
-          p.ISO_A2_EH,
-        )
-      : text(p.airports_gps_code.length, this.getPrefix(p.airports_gps_code));
+  private textProp(data: UpdateData) {
+    return text(data.nbAirports.toString(), data.prefix);
   }
 
   addTo(map: L.Map) {
     this.info.addTo(map);
     this.update();
   }
+}
+
+export interface UpdateData {
+  prefix: string;
+  nbAirports: number;
 }

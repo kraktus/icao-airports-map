@@ -8,7 +8,7 @@ import {
   mapValues,
 } from './utils';
 import { Airport, Airports, Oaci } from './airport';
-import { Info } from './info';
+import { Info, UpdateData } from './info';
 import { qualifiedMajority } from './config';
 import { Feature, MultiPolygon, GeoJsonProperties, Polygon } from 'geojson';
 
@@ -36,7 +36,7 @@ export class Borders {
   makeGeojson(): Map<string, GeoData> {
     const withAirports: Border[] = Countries.map(feature =>
       Border.new(this.info, [feature]),
-    ).filter(border => border.prefix().startsWith(this.info.filter));
+    );
 
     const polyByPrefix: Map<string, Border[]> = groupBy(
       withAirports,
@@ -65,6 +65,10 @@ export class Borders {
 
     const geoDataMap = new Map<string, GeoData>();
     for (const prefix of this.arp.listPrefix(this.info.prefixLength())) {
+      if (!prefix.startsWith(this.info.filter)) {
+        continue;
+      }
+
       const poly = polysByPrefix.get(prefix);
       const airports = individualAiportsByPrefix.get(prefix) || [];
       geoDataMap.set(prefix, {
@@ -191,3 +195,13 @@ export interface GeoData {
   airports: Airport[];
   color: string;
 }
+
+export const toUpdateData = (prefix: string, geoData: GeoData): UpdateData => {
+  const inPoly = geoData.feature?.properties!.airports_gps_code.filter(
+    (icao: string) => icao.startsWith(prefix),
+  ).length;
+  return {
+    prefix: prefix,
+    nbAirports: (inPoly || 0) + geoData.airports.length,
+  };
+};
