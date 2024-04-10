@@ -1,6 +1,7 @@
 import { ALL } from './unparsed';
 import Papa from 'papaparse';
 import { colors } from './colors';
+import { filtermap } from './utils';
 import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
 
 export type Oaci = string;
@@ -61,15 +62,14 @@ export const toCircleMarker = (
   return circleMarker;
 };
 
-const filtermap = <T, U>(arr: T[], f: (t: T) => U | undefined): U[] => {
-  const res = [];
-  for (const t of arr) {
-    const u = f(t);
-    if (u !== undefined) {
-      res.push(u);
-    }
-  }
-  return res;
+export const toMarker = (airport: Airport): L.Marker => {
+  const icon = isHeliport(airport) ? heliportIcon : L.Icon.Default;
+  const marker = L.marker([airport.latitude_deg, airport.longitude_deg], {
+    // @ts-ignore see if it works like that
+    icon: icon,
+  });
+  marker.bindPopup(`${airport.name}: ${airport.gps_code}`);
+  return marker;
 };
 
 const toAirportMap = (airports: Airport[]) => {
@@ -191,3 +191,13 @@ export class Airports {
 export const airports = new Airports(
   Papa.parse(ALL, { header: true }).data as Airport[],
 );
+
+const isHeliport = (airport: Airport): boolean =>
+  airport.name.toLowerCase().includes('heliport');
+
+const heliportIcon = L.icon({
+  iconUrl: 'heliport.png',
+  //iconSize: [32, 32],
+  //iconAnchor: [16, 16],
+  //popupAnchor: [0, -16],
+});

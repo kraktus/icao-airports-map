@@ -89,6 +89,17 @@ export function mergeCountBy<T, V>(
   return x;
 }
 
+export function filtermap<T, U>(arr: T[], f: (t: T) => U | undefined): U[] {
+  const res = [];
+  for (const t of arr) {
+    const u = f(t);
+    if (u !== undefined) {
+      res.push(u);
+    }
+  }
+  return res;
+}
+
 export function deepCopy<T>(x: T): T {
   return structuredClone(x);
 }

@@ -117,7 +117,6 @@ class Styling {
     }
     for (const [layer, style] of this.geoJsons) {
       layer.setStyle(style);
-      console.log('style following', style);
     }
   }
 }
