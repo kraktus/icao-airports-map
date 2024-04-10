@@ -1,25 +1,16 @@
 import * as FeatureCollection from './data/country-borders.geo.json';
 import {
   groupBy,
-  countBy,
   getMostCommon,
   mergeCountBy,
   fold,
   groupByOne,
   mapValues,
-  setOf,
 } from './utils';
 import { Airport, Airports, Oaci } from './airport';
 import { Info } from './info';
 import { qualifiedMajority } from './config';
-import {
-  Feature,
-  MultiPolygon,
-  MultiPoint,
-  GeoJsonProperties,
-  Polygon,
-  Geometry,
-} from 'geojson';
+import { Feature, MultiPolygon, GeoJsonProperties, Polygon } from 'geojson';
 
 // interface LocalFeature {
 //   geometry: { coordinates: number[][][]; type: string };
@@ -177,30 +168,6 @@ class Border {
     }
   }
 }
-
-const toMultiPoints = (
-  airports: Airport[],
-  props: GeoJsonProperties,
-): Feature<MultiPoint> => {
-  return writemultiPoint(
-    airports.map(airport => [airport.longitude_deg, airport.latitude_deg]),
-    props,
-  );
-};
-
-const writemultiPoint = (
-  coords: number[][],
-  props: GeoJsonProperties,
-): Feature<MultiPoint> => {
-  return {
-    type: 'Feature',
-    geometry: {
-      type: 'MultiPoint',
-      coordinates: coords,
-    },
-    properties: props,
-  };
-};
 
 const writeMultiPolygon = (
   coords: number[][][][],

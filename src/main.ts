@@ -2,7 +2,6 @@ import './style.css';
 import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
 import 'leaflet/dist/leaflet.css';
 import { airports, Airport } from './airport';
-import { colors } from './colors';
 import hull from 'hull.js';
 import { addGeo } from './countries';
 import { Info } from './info';

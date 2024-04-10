@@ -1,7 +1,7 @@
 import * as L from 'leaflet'; // https://github.com/DefinitelyTyped/DefinitelyTyped/blob/master/types/leaflet/index.d.ts
-import { Airports, Iso2, Airport, toCircle, toCircleMarker } from './airport';
-import { countBy, getMostCommon, deepCopy } from './utils';
-import { Borders, GeoData } from './borders';
+import { Airports, toCircleMarker } from './airport';
+import { deepCopy } from './utils';
+import { Borders } from './borders';
 import { Info } from './info';
 import { CustomMap, main } from './main';
 import { debug } from './config';
@@ -41,7 +41,7 @@ const zoomToFeature =
 export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   //console.log('full geojson', new Borders(prefixLength, arp).makeGeojson());
   const geoDataMap = new Borders(info, arp).makeGeojson();
-  for (const [prefix, geoData] of geoDataMap) {
+  for (const geoData of geoDataMap.values()) {
     const layerElm: (L.Path | L.GeoJSON)[] = [];
     const styling = new Styling();
     const color = geoData.color;
@@ -49,13 +49,13 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
     airportCircles.forEach(c => styling.addPath(c));
     if (geoData.feature !== undefined) {
       const multiPolygon = L.geoJson(geoData.feature, {
-        style: styleCallback(arp),
+        style: styleCallback,
       });
       multiPolygon.on({
         click: zoomToFeature(info, customMap.map, geoData.feature),
       });
       layerElm.push(multiPolygon);
-      styling.addGeoJson(multiPolygon, styleCallback(arp)(geoData.feature));
+      styling.addGeoJson(multiPolygon, styleCallback(geoData.feature));
     }
     layerElm.push(...airportCircles);
     const layer = L.featureGroup(layerElm);
@@ -67,19 +67,17 @@ export const addGeo = (customMap: CustomMap, arp: Airports, info: Info) => {
   }
 };
 
-const styleCallback =
-  (arp: Airports) =>
-  (feature?: Feature): L.PathOptions => {
-    let fillColor = debug ? 'black' : feature?.properties!.color;
-    return {
-      fillColor: fillColor,
-      weight: 2,
-      opacity: 1,
-      color: undefined,
-      dashArray: '3',
-      fillOpacity: 0.6,
-    };
+const styleCallback = (feature?: Feature): L.PathOptions => {
+  let fillColor = debug ? 'black' : feature?.properties!.color;
+  return {
+    fillColor: fillColor,
+    weight: 2,
+    opacity: 1,
+    color: undefined,
+    dashArray: '3',
+    fillOpacity: 0.6,
   };
+};
 
 class Styling {
   private paths: [L.CircleMarker, L.CircleMarkerOptions][];
@@ -104,7 +102,7 @@ class Styling {
       layer.setRadius(options.radius! * 5);
       layer.setStyle(highLightStyle);
     }
-    for (const [layer, style] of this.geoJsons) {
+    for (const [layer, _] of this.geoJsons) {
       layer.setStyle(highLightStyle);
     }
   }

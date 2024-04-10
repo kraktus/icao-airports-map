@@ -27,7 +27,7 @@ export class Info {
     this.filter = filter;
     // @ts-ignore
     this.info = L.control();
-    this.info.onAdd = function (map: L.Map) {
+    this.info.onAdd = function (_map: L.Map) {
       this._div = L.DomUtil.create('div', 'info'); // create a div with a class "info"
       return this._div;
     };

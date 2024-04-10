@@ -74,7 +74,7 @@ export function fold<T>(i: Iterable<T>, f: (a: T, b: T) => T): T {
   return Array.from(i).reduce(f);
 }
 
-export function mergeCountBy<T, V>(
+export function mergeCountBy<V>(
   y: Map<V, number>,
   z: Map<V, number>,
 ): Map<V, number> {
