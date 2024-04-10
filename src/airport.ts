@@ -1,4 +1,4 @@
-import { ALL } from './unparsed';
+import { ALL } from './data/unparsed';
 import Papa from 'papaparse';
 import { colors } from './colors';
 import { filtermap } from './utils';

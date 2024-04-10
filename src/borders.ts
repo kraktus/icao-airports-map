@@ -1,4 +1,4 @@
-import * as FeatureCollection from '../country-borders-simplified-2.geo.json';
+import * as FeatureCollection from './data/country-borders.geo.json';
 import {
   groupBy,
   countBy,
